@@ -243,7 +243,7 @@ class Blocks {
 					class="nrpb-posts-filter__clear"
 					type="button"
 					aria-label="<?php esc_attr_e( 'Clear filters', 'nr-posts-blocks' ); ?>"
-					hidden
+					aria-hidden="true"
 				></button>
 			</div>
 		</div>

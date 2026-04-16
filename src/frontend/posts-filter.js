@@ -84,7 +84,8 @@ export class PostsFilter {
 		const hasFilters =
 			this.selectedCategories.size > 0 || this.selectedTags.size > 0;
 
-		clearBtn.hidden = ! hasFilters;
+		clearBtn.classList.toggle( 'is-visible', hasFilters );
+		clearBtn.setAttribute( 'aria-hidden', hasFilters ? 'false' : 'true' );
 	}
 
 	clearFilters() {

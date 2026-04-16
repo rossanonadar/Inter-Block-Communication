@@ -157,13 +157,26 @@
 		border-radius: 50%;
 		cursor: pointer;
 		padding: 0;
-		transition: color var(--nrpb-transition), background var(--nrpb-transition), border-color var(--nrpb-transition);
+		// Always occupies space — only visibility changes
+		visibility: hidden;
+		opacity: 0;
+		transition:
+			color var(--nrpb-transition),
+			background var(--nrpb-transition),
+			border-color var(--nrpb-transition),
+			opacity var(--nrpb-transition),
+			visibility var(--nrpb-transition);
 
 		@include m.focus-ring-within;
 
-		// × character
 		&::before {
 			content: '✕';
+		}
+
+		&.is-visible {
+			visibility: visible;
+			opacity: 1;
+			pointer-events: auto;
 		}
 
 		&:hover {
