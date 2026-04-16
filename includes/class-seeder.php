@@ -251,18 +251,44 @@ class Seeder {
 		// Determine readable text color.
 		$text_color = $this->get_contrast_color( $hex_color );
 
+		// Derive a slightly darker shade for the gradient stop.
+		$r2 = max( 0, hexdec( substr( $hex_color, 0, 2 ) ) - 40 );
+		$g2 = max( 0, hexdec( substr( $hex_color, 2, 2 ) ) - 40 );
+		$b2 = max( 0, hexdec( substr( $hex_color, 4, 2 ) ) - 40 );
+		$dark_color = sprintf( '%02x%02x%02x', $r2, $g2, $b2 );
+
 		$svg = <<<SVG
 		<svg xmlns="http://www.w3.org/2000/svg" width="800" height="500" viewBox="0 0 800 500">
-			<rect width="800" height="500" fill="#{$hex_color}"/>
+			<defs>
+				<linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
+					<stop offset="0%" stop-color="#{$hex_color}"/>
+					<stop offset="100%" stop-color="#{$dark_color}"/>
+				</linearGradient>
+				<filter id="noise">
+					<feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch"/>
+					<feColorMatrix type="saturate" values="0"/>
+					<feBlend in="SourceGraphic" mode="overlay" result="blend"/>
+					<feComposite in="blend" in2="SourceGraphic" operator="in"/>
+				</filter>
+			</defs>
+			<rect width="800" height="500" fill="url(#g)"/>
+			<rect width="800" height="500" fill="#{$hex_color}" opacity="0.08" filter="url(#noise)"/>
+			<!-- Decorative circles -->
+			<circle cx="650" cy="80" r="120" fill="{$text_color}" opacity="0.06"/>
+			<circle cx="150" cy="420" r="90" fill="{$text_color}" opacity="0.06"/>
+			<circle cx="720" cy="400" r="60" fill="{$text_color}" opacity="0.04"/>
+			<!-- Label pill -->
+			<rect x="270" y="205" width="260" height="90" rx="45" fill="{$text_color}" opacity="0.15"/>
 			<text
-				x="400" y="270"
-				font-family="system-ui, sans-serif"
-				font-size="72"
-				font-weight="700"
+				x="400" y="258"
+				font-family="system-ui, -apple-system, sans-serif"
+				font-size="52"
+				font-weight="800"
 				fill="{$text_color}"
 				text-anchor="middle"
 				dominant-baseline="middle"
-				opacity="0.9"
+				letter-spacing="-1"
+				opacity="0.92"
 			>{$label}</text>
 		</svg>
 		SVG;
