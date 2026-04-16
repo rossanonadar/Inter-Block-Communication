@@ -29,6 +29,9 @@ export class PostsGrid {
 	/** @type {AbortController|null} */
 	abortController = null;
 
+	/** @type {AbortController} — controls event listener lifetime */
+	listenerController = new AbortController();
+
 	/** @type {string} */
 	apiBase = window.nrpbData?.restUrl ?? '/wp-json/nrpb/v1';
 
@@ -44,19 +47,36 @@ export class PostsGrid {
 	}
 
 	bindEvents() {
-		document.addEventListener( 'nrpb:filter-change', ( e ) => {
-			const { blockId, categories, tags } = e.detail;
+		document.addEventListener(
+			'nrpb:filter-change',
+			( e ) => {
+				const { blockId, categories, tags } = e.detail;
 
-			// Only respond to events targeting this block.
-			if ( blockId && blockId !== this.blockId ) {
-				return;
-			}
+				// Require an exact blockId match.
+				// An empty blockId on either side means the block was not
+				// properly initialised — ignore rather than broadcast to all grids.
+				if ( ! blockId || ! this.blockId || blockId !== this.blockId ) {
+					return;
+				}
 
-			this.activeCategories = categories;
-			this.activeTags = tags;
-			this.currentPage = 1;
-			this.fetchPosts();
-		} );
+				this.activeCategories = categories;
+				this.activeTags = tags;
+				this.currentPage = 1;
+				this.fetchPosts();
+			},
+			{ signal: this.listenerController.signal }
+		);
+	}
+
+	/**
+	 * Removes the document event listener and cancels any in-flight request.
+	 * Call this if the grid element is removed from the DOM (e.g. SPA navigation).
+	 */
+	destroy() {
+		this.listenerController.abort();
+		if ( this.abortController ) {
+			this.abortController.abort();
+		}
 	}
 
 	async fetchPosts() {
