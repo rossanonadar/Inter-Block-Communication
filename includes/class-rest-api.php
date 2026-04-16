@@ -183,6 +183,9 @@ class REST_API {
 			? (string) get_post_meta( $thumbnail_id, '_wp_attachment_image_alt', true )
 			: '';
 
+		$categories = wp_get_post_categories( $post->ID, [ 'fields' => 'all' ] );
+		$tags       = wp_get_post_tags( $post->ID, [ 'fields' => 'all' ] );
+
 		return [
 			'id'            => $post->ID,
 			'title'         => get_the_title( $post ),
@@ -190,10 +193,13 @@ class REST_API {
 			'permalink'     => get_permalink( $post ),
 			'thumbnail_url' => $thumbnail_url ?: '',
 			'thumbnail_alt' => $thumbnail_alt,
-			'categories'    => wp_get_post_categories( $post->ID ),
-			'tags'          => array_column(
-				wp_get_post_tags( $post->ID ),
-				'term_id'
+			'categories'    => array_map(
+				fn( $term ) => [ 'id' => $term->term_id, 'name' => $term->name, 'slug' => $term->slug ],
+				is_array( $categories ) ? $categories : []
+			),
+			'tags'          => array_map(
+				fn( $term ) => [ 'id' => $term->term_id, 'name' => $term->name, 'slug' => $term->slug ],
+				is_array( $tags ) ? $tags : []
 			),
 		];
 	}

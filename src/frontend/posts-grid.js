@@ -145,9 +145,29 @@ export class PostsGrid {
 	postCardHTML( post ) {
 		const imageHtml = post.thumbnail_url
 			? `<div class="nrpb-post-card__image">
-					<a href="${ post.permalink }" tabindex="-1" aria-hidden="true">
-						<img src="${ post.thumbnail_url }" alt="${ escapeHtml( post.thumbnail_alt ) }">
+					<a href="${ escapeHtml( post.permalink ) }" tabindex="-1" aria-hidden="true">
+						<img src="${ escapeHtml( post.thumbnail_url ) }" alt="${ escapeHtml( post.thumbnail_alt ) }">
 					</a>
+			   </div>`
+			: '';
+
+		// Primary category badge — first category only.
+		const primaryCategory = Array.isArray( post.categories ) && post.categories.length
+			? post.categories[ 0 ]
+			: null;
+
+		const categoryHtml = primaryCategory
+			? `<span class="nrpb-post-card__category" data-slug="${ escapeHtml( primaryCategory.slug ) }">
+					${ escapeHtml( primaryCategory.name ) }
+			   </span>`
+			: '';
+
+		// Tag pills — all tags.
+		const tagsHtml = Array.isArray( post.tags ) && post.tags.length
+			? `<div class="nrpb-post-card__tags" aria-label="Tags">
+					${ post.tags.map( ( tag ) =>
+						`<span class="nrpb-post-card__tag">#${ escapeHtml( tag.name ) }</span>`
+					).join( '' ) }
 			   </div>`
 			: '';
 
@@ -155,13 +175,15 @@ export class PostsGrid {
 			<article class="nrpb-post-card" data-post-id="${ post.id }">
 				${ imageHtml }
 				<div class="nrpb-post-card__body">
+					${ categoryHtml }
 					<h3 class="nrpb-post-card__title">
-						<a href="${ post.permalink }">${ escapeHtml( post.title ) }</a>
+						<a href="${ escapeHtml( post.permalink ) }">${ escapeHtml( post.title ) }</a>
 					</h3>
 					<div class="nrpb-post-card__excerpt">
 						<p>${ escapeHtml( post.excerpt ) }</p>
 					</div>
-					<a class="nrpb-post-card__read-more" href="${ post.permalink }">
+					${ tagsHtml }
+					<a class="nrpb-post-card__read-more" href="${ escapeHtml( post.permalink ) }">
 						Read more
 					</a>
 				</div>

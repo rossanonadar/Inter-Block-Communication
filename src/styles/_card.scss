@@ -82,6 +82,43 @@
 		gap: var(--nrpb-space-xs);
 	}
 
+	// ---- Category badge ------------------------------------------------------
+
+	&__category {
+		display: inline-block;
+		align-self: flex-start;
+		padding: 0.2rem 0.6rem;
+		font-family: var(--nrpb-font-family);
+		font-size: var(--nrpb-font-size-xs);
+		font-weight: 700;
+		text-transform: uppercase;
+		letter-spacing: 0.06em;
+		color: var(--nrpb-color-primary);
+		background: var(--nrpb-color-active-bg);
+		border-radius: var(--nrpb-radius-pill);
+		margin-bottom: 0.1rem;
+	}
+
+	// ---- Tags ----------------------------------------------------------------
+
+	&__tags {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.3rem;
+		margin-top: 0.25rem;
+	}
+
+	&__tag {
+		font-family: var(--nrpb-font-family);
+		font-size: var(--nrpb-font-size-xs);
+		color: var(--nrpb-color-text-light);
+		transition: color var(--nrpb-transition);
+
+		&:hover {
+			color: var(--nrpb-color-text-muted);
+		}
+	}
+
 	// ---- Title ---------------------------------------------------------------
 
 	&__title {
