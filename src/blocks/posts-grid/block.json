@@ -1,0 +1,42 @@
+{
+  "$schema": "https://schemas.wp.org/trunk/block.json",
+  "apiVersion": 3,
+  "name": "nrpb/posts-grid",
+  "version": "1.0.0",
+  "title": "Posts Grid",
+  "category": "widgets",
+  "icon": "grid-view",
+  "description": "Dynamic posts grid with configurable columns and pagination.",
+  "keywords": ["posts", "grid", "dynamic"],
+  "textdomain": "nr-posts-blocks",
+  "editorScript": "file:../../../build/posts-grid.js",
+  "editorStyle": "file:../../../build/posts-grid.css",
+  "style": "file:../../../build/frontend.css",
+  "attributes": {
+    "blockId": {
+      "type": "string",
+      "default": ""
+    },
+    "columns": {
+      "type": "integer",
+      "default": 3
+    },
+    "postsPerPage": {
+      "type": "integer",
+      "default": 6
+    }
+  },
+  "supports": {
+    "html": false,
+    "align": ["wide", "full"],
+    "color": {
+      "background": true,
+      "text": true
+    },
+    "spacing": {
+      "padding": true,
+      "margin": true
+    }
+  },
+  "allowedBlocks": ["nrpb/pagination"]
+}

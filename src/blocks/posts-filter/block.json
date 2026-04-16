@@ -1,0 +1,29 @@
+{
+  "$schema": "https://schemas.wp.org/trunk/block.json",
+  "apiVersion": 3,
+  "name": "nrpb/posts-filter",
+  "version": "1.0.0",
+  "title": "Posts Filter",
+  "category": "widgets",
+  "icon": "filter",
+  "description": "Category and tag filter UI for the Posts Grid block.",
+  "keywords": ["filter", "posts", "category", "tag"],
+  "textdomain": "nr-posts-blocks",
+  "editorScript": "file:../../../build/posts-filter.js",
+  "editorStyle": "file:../../../build/posts-filter.css",
+  "style": "file:../../../build/frontend.css",
+  "attributes": {
+    "blockId": {
+      "type": "string",
+      "default": ""
+    }
+  },
+  "supports": {
+    "html": false,
+    "align": ["wide", "full"],
+    "spacing": {
+      "padding": true,
+      "margin": true
+    }
+  }
+}
