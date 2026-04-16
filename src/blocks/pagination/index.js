@@ -15,7 +15,8 @@ function Edit() {
 
 registerBlockType( metadata.name, {
 	edit: Edit,
-	save: () => (
-		<div { ...useBlockProps.save( { className: 'nrpb-pagination' } ) }></div>
-	),
+	// Dynamic block — PHP render_callback outputs the pagination HTML.
+	// Returning null means no HTML is stored between block comments,
+	// matching the seeder's serialized format: <!-- wp:nrpb/pagination /-->
+	save: () => null,
 } );
