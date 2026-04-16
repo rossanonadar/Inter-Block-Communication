@@ -9,6 +9,8 @@
 
 .nrpb-posts-filter,
 .nrpb-posts-grid {
+	box-sizing: border-box;
+	width: 100%;
 	padding-inline: var(--nrpb-page-gutter);
 
 	@include m.respond-down(sm) {
