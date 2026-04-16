@@ -168,6 +168,7 @@ class Blocks {
 			[
 				'taxonomy'   => 'category',
 				'hide_empty' => true,
+				'exclude'    => [ get_option( 'default_category' ) ],
 			]
 		);
 
