@@ -238,9 +238,12 @@ class Blocks {
 			<?php endif; ?>
 
 			<div class="nrpb-posts-filter__actions">
-				<button class="nrpb-posts-filter__clear" type="button" hidden>
-					<?php esc_html_e( 'Clear filters', 'nr-posts-blocks' ); ?>
-				</button>
+				<button
+					class="nrpb-posts-filter__clear"
+					type="button"
+					aria-label="<?php esc_attr_e( 'Clear filters', 'nr-posts-blocks' ); ?>"
+					hidden
+				></button>
 			</div>
 		</div>
 		<?php

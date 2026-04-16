@@ -60,11 +60,17 @@
 
 	&__list {
 		display: flex;
-		flex-wrap: wrap;
+		flex-wrap: nowrap;        // never break to a second line
 		gap: var(--nrpb-space-xs);
 		list-style: none;
 		margin: 0;
 		padding: 0;
+		overflow-x: auto;         // scroll if pills overflow
+		scrollbar-width: none;    // hide scrollbar (Firefox)
+
+		&::-webkit-scrollbar {
+			display: none;        // hide scrollbar (Chrome/Safari)
+		}
 	}
 
 	// ---- Filter pill button --------------------------------------------------
@@ -76,13 +82,16 @@
 		padding: 0.3rem 0.7rem;
 		font-family: var(--nrpb-font-family);
 		font-size: var(--nrpb-font-size-sm);
+		// Reserve width for bold state so activation never causes layout shift
 		font-weight: 500;
 		line-height: 1.4;
+		white-space: nowrap;
 		color: var(--nrpb-color-text-muted);
 		background: transparent;
 		border: 1px solid transparent;
 		border-radius: var(--nrpb-radius-pill);
 		cursor: pointer;
+		flex-shrink: 0;
 		transition:
 			background var(--nrpb-transition),
 			border-color var(--nrpb-transition),
@@ -101,8 +110,13 @@
 			background: var(--nrpb-color-active-bg);
 			border-color: var(--nrpb-color-border-focus);
 			color: var(--nrpb-color-primary);
-			font-weight: 600;
-			box-shadow: 0 0 0 3px var(--nrpb-color-primary-ring);
+			// inset shadow — zero layout impact
+			box-shadow: inset 0 0 0 1px var(--nrpb-color-border-focus);
+
+			// Prevent bold from shifting surrounding pills
+			.nrpb-posts-filter__btn-text {
+				font-weight: 600;
+			}
 		}
 	}
 
@@ -116,35 +130,46 @@
 	&__actions {
 		display: flex;
 		align-items: center;
-		padding: 0.875rem var(--nrpb-space-md);
+		padding: 0 0.75rem;
 		border-left: 1px solid var(--nrpb-color-border);
 		flex-shrink: 0;
+		align-self: stretch;
 
 		@include m.respond-down(md) {
 			border-left: none;
 			border-top: 1px solid var(--nrpb-color-border);
 			width: 100%;
+			padding: 0.5rem 0.75rem;
 		}
 	}
 
 	&__clear {
-		font-family: var(--nrpb-font-family);
-		font-size: var(--nrpb-font-size-sm);
-		font-weight: 600;
-		color: var(--nrpb-color-text-muted);
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 1.5rem;
+		height: 1.5rem;
+		font-size: 0.9rem;
+		line-height: 1;
+		color: var(--nrpb-color-text-light);
 		background: none;
-		border: none;
+		border: 1px solid transparent;
+		border-radius: 50%;
 		cursor: pointer;
-		padding: 0.3rem var(--nrpb-space-xs);
-		border-radius: var(--nrpb-radius-xs);
-		white-space: nowrap;
-		transition: color var(--nrpb-transition), background var(--nrpb-transition);
+		padding: 0;
+		transition: color var(--nrpb-transition), background var(--nrpb-transition), border-color var(--nrpb-transition);
 
 		@include m.focus-ring-within;
+
+		// × character
+		&::before {
+			content: '✕';
+		}
 
 		&:hover {
 			color: var(--nrpb-color-danger);
 			background: var(--nrpb-color-danger-bg);
+			border-color: #fca5a5;
 		}
 	}
 
