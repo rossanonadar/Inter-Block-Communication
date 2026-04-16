@@ -1,0 +1,91 @@
+// =============================================================================
+// Mixins
+// =============================================================================
+
+@use 'sass:map';
+@use 'variables' as v;
+
+// ---- Responsive breakpoints --------------------------------------------------
+
+/// Mobile-first: styles apply from $bp and up
+/// @param {String} $bp — sm | md | lg | xl
+@mixin respond-up($bp) {
+	$map: (
+		sm: v.$breakpoint-sm,
+		md: v.$breakpoint-md,
+		lg: v.$breakpoint-lg,
+		xl: v.$breakpoint-xl,
+	);
+
+	@media (min-width: map.get($map, $bp)) {
+		@content;
+	}
+}
+
+/// Desktop-first: styles apply below $bp
+/// @param {String} $bp — sm | md | lg | xl
+@mixin respond-down($bp) {
+	$map: (
+		sm: v.$breakpoint-sm,
+		md: v.$breakpoint-md,
+		lg: v.$breakpoint-lg,
+		xl: v.$breakpoint-xl,
+	);
+
+	@media (max-width: calc(#{map.get($map, $bp)} - 1px)) {
+		@content;
+	}
+}
+
+// ---- Focus ring --------------------------------------------------------------
+
+/// Accessible keyboard focus ring using CSS custom properties
+@mixin focus-ring {
+	outline: 2px solid var(--nrpb-color-primary);
+	outline-offset: 2px;
+}
+
+@mixin focus-ring-within {
+	&:focus-visible {
+		@include focus-ring;
+	}
+}
+
+// ---- Visually hidden (accessible) -------------------------------------------
+
+@mixin visually-hidden {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	padding: 0;
+	margin: -1px;
+	overflow: hidden;
+	clip: rect(0, 0, 0, 0);
+	white-space: nowrap;
+	border: 0;
+}
+
+// ---- Text truncation ---------------------------------------------------------
+
+/// Clamp multi-line text
+/// @param {Number} $lines
+@mixin line-clamp($lines) {
+	display: -webkit-box;
+	-webkit-line-clamp: $lines;
+	-webkit-box-orient: vertical;
+	overflow: hidden;
+}
+
+// ---- Flex utils --------------------------------------------------------------
+
+@mixin flex-center {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+@mixin flex-between {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+}

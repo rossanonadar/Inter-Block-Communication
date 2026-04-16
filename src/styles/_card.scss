@@ -1,0 +1,157 @@
+// =============================================================================
+// Post Card Component
+// =============================================================================
+
+@use 'mixins' as m;
+
+.nrpb-post-card {
+	display: flex;
+	flex-direction: column;
+	background: var(--nrpb-color-bg);
+	border: 1px solid var(--nrpb-color-border);
+	border-radius: var(--nrpb-radius-md);
+	overflow: hidden;
+	box-shadow: var(--nrpb-shadow-sm);
+	transition:
+		box-shadow var(--nrpb-transition),
+		transform var(--nrpb-transition),
+		border-color var(--nrpb-transition);
+
+	&:hover {
+		box-shadow: var(--nrpb-shadow-lg);
+		transform: translateY(-4px);
+		border-color: transparent;
+	}
+
+	// ---- Featured image ------------------------------------------------------
+
+	&__image {
+		position: relative;
+		aspect-ratio: 16 / 9;
+		overflow: hidden;
+		background: var(--nrpb-color-border);
+		flex-shrink: 0;
+
+		a {
+			display: block;
+			width: 100%;
+			height: 100%;
+		}
+
+		img {
+			display: block;
+			width: 100%;
+			height: 100%;
+			object-fit: cover;
+			transition: transform var(--nrpb-transition-slow);
+		}
+
+		// Gradient overlay — appears on card hover
+		&::after {
+			content: '';
+			position: absolute;
+			inset: 0;
+			background: linear-gradient(
+				to bottom,
+				transparent 40%,
+				rgba(15, 23, 42, 0.4) 100%
+			);
+			opacity: 0;
+			transition: opacity var(--nrpb-transition);
+			pointer-events: none;
+		}
+	}
+
+	&:hover &__image {
+		img {
+			transform: scale(1.06);
+		}
+
+		&::after {
+			opacity: 1;
+		}
+	}
+
+	// ---- Body ----------------------------------------------------------------
+
+	&__body {
+		display: flex;
+		flex-direction: column;
+		flex: 1;
+		padding: var(--nrpb-space-md) 1.375rem 1.375rem;
+		gap: var(--nrpb-space-xs);
+	}
+
+	// ---- Title ---------------------------------------------------------------
+
+	&__title {
+		font-family: var(--nrpb-font-family);
+		font-size: var(--nrpb-font-size-base);
+		font-weight: 700;
+		line-height: 1.4;
+		letter-spacing: -0.01em;
+		margin: 0;
+
+		a {
+			color: var(--nrpb-color-text);
+			text-decoration: none;
+			transition: color var(--nrpb-transition);
+
+			@include m.focus-ring-within;
+
+			&:hover {
+				color: var(--nrpb-color-primary);
+			}
+		}
+	}
+
+	// ---- Excerpt -------------------------------------------------------------
+
+	&__excerpt {
+		flex: 1;
+		font-family: var(--nrpb-font-family);
+		font-size: var(--nrpb-font-size-md);
+		color: var(--nrpb-color-text-muted);
+		line-height: var(--nrpb-line-height);
+		margin: 0;
+
+		@include m.line-clamp(3);
+
+		p {
+			margin: 0;
+		}
+	}
+
+	// ---- Read more -----------------------------------------------------------
+
+	&__read-more {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.3rem;
+		margin-top: var(--nrpb-space-sm);
+		font-family: var(--nrpb-font-family);
+		font-size: var(--nrpb-font-size-sm);
+		font-weight: 600;
+		letter-spacing: 0.01em;
+		color: var(--nrpb-color-primary);
+		text-decoration: none;
+		transition: gap var(--nrpb-transition), color var(--nrpb-transition);
+
+		@include m.focus-ring-within;
+
+		&::after {
+			content: '→';
+			display: inline-block;
+			transition: transform var(--nrpb-transition);
+		}
+
+		&:hover {
+			color: var(--nrpb-color-primary-hover);
+			gap: 0.5rem;
+
+			&::after {
+				transform: translateX(3px);
+			}
+		}
+	}
+}

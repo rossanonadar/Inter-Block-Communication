@@ -1,0 +1,161 @@
+// =============================================================================
+// Posts Filter Component
+// =============================================================================
+
+@use 'mixins' as m;
+
+.nrpb-posts-filter {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: stretch;
+	margin-bottom: var(--nrpb-space-lg);
+	background: var(--nrpb-color-bg);
+	border: 1px solid var(--nrpb-color-border);
+	border-radius: var(--nrpb-radius-md);
+	box-shadow: var(--nrpb-shadow-sm);
+	overflow: hidden;
+
+	// ---- Filter group (categories / tags) ------------------------------------
+
+	&__group {
+		display: flex;
+		align-items: center;
+		gap: var(--nrpb-space-sm);
+		flex: 1;
+		min-width: 0;
+		padding: 0.875rem var(--nrpb-space-md);
+
+		& + & {
+			border-left: 1px solid var(--nrpb-color-border);
+		}
+
+		@include m.respond-down(md) {
+			flex-direction: column;
+			align-items: flex-start;
+
+			& + & {
+				border-left: none;
+				border-top: 1px solid var(--nrpb-color-border);
+			}
+		}
+	}
+
+	&__label {
+		flex-shrink: 0;
+		font-family: var(--nrpb-font-family);
+		font-size: var(--nrpb-font-size-xs);
+		font-weight: 700;
+		text-transform: uppercase;
+		letter-spacing: 0.08em;
+		color: var(--nrpb-color-text-light);
+		margin: 0;
+		padding-right: var(--nrpb-space-sm);
+		border-right: 1px solid var(--nrpb-color-border);
+
+		@include m.respond-down(md) {
+			border-right: none;
+			padding-right: 0;
+		}
+	}
+
+	&__list {
+		display: flex;
+		flex-wrap: wrap;
+		gap: var(--nrpb-space-xs);
+		list-style: none;
+		margin: 0;
+		padding: 0;
+	}
+
+	// ---- Filter pill button --------------------------------------------------
+
+	&__btn {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.25rem;
+		padding: 0.3rem 0.7rem;
+		font-family: var(--nrpb-font-family);
+		font-size: var(--nrpb-font-size-sm);
+		font-weight: 500;
+		line-height: 1.4;
+		color: var(--nrpb-color-text-muted);
+		background: transparent;
+		border: 1px solid transparent;
+		border-radius: var(--nrpb-radius-pill);
+		cursor: pointer;
+		transition:
+			background var(--nrpb-transition),
+			border-color var(--nrpb-transition),
+			color var(--nrpb-transition),
+			box-shadow var(--nrpb-transition);
+
+		@include m.focus-ring-within;
+
+		&:hover {
+			background: var(--nrpb-color-surface);
+			border-color: var(--nrpb-color-border);
+			color: var(--nrpb-color-text);
+		}
+
+		&.is-active {
+			background: var(--nrpb-color-active-bg);
+			border-color: var(--nrpb-color-border-focus);
+			color: var(--nrpb-color-primary);
+			font-weight: 600;
+			box-shadow: 0 0 0 3px var(--nrpb-color-primary-ring);
+		}
+	}
+
+	&__count {
+		font-size: var(--nrpb-font-size-xs);
+		opacity: 0.6;
+	}
+
+	// ---- Clear action --------------------------------------------------------
+
+	&__actions {
+		display: flex;
+		align-items: center;
+		padding: 0.875rem var(--nrpb-space-md);
+		border-left: 1px solid var(--nrpb-color-border);
+		flex-shrink: 0;
+
+		@include m.respond-down(md) {
+			border-left: none;
+			border-top: 1px solid var(--nrpb-color-border);
+			width: 100%;
+		}
+	}
+
+	&__clear {
+		font-family: var(--nrpb-font-family);
+		font-size: var(--nrpb-font-size-sm);
+		font-weight: 600;
+		color: var(--nrpb-color-text-muted);
+		background: none;
+		border: none;
+		cursor: pointer;
+		padding: 0.3rem var(--nrpb-space-xs);
+		border-radius: var(--nrpb-radius-xs);
+		white-space: nowrap;
+		transition: color var(--nrpb-transition), background var(--nrpb-transition);
+
+		@include m.focus-ring-within;
+
+		&:hover {
+			color: var(--nrpb-color-danger);
+			background: var(--nrpb-color-danger-bg);
+		}
+	}
+
+	// ---- Editor hint (shown only in Gutenberg editor) ------------------------
+
+	&__editor-hint {
+		font-size: var(--nrpb-font-size-sm);
+		color: var(--nrpb-color-text-light);
+		font-style: italic;
+		margin: 0;
+		padding: 0.875rem var(--nrpb-space-md);
+		align-self: center;
+	}
+}

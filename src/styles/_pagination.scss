@@ -1,0 +1,61 @@
+// =============================================================================
+// Pagination Component
+// =============================================================================
+
+@use 'mixins' as m;
+
+.nrpb-pagination {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--nrpb-space-xs);
+	justify-content: center;
+	align-items: center;
+
+	&__btn {
+		@include m.flex-center;
+		min-width: 2.25rem;
+		height: 2.25rem;
+		padding: 0 0.875rem;
+		font-family: var(--nrpb-font-family);
+		font-size: var(--nrpb-font-size-md);
+		font-weight: 500;
+		color: var(--nrpb-color-text-muted);
+		background: var(--nrpb-color-bg);
+		border: 1px solid var(--nrpb-color-border);
+		border-radius: var(--nrpb-radius-sm);
+		cursor: pointer;
+		transition:
+			background var(--nrpb-transition),
+			border-color var(--nrpb-transition),
+			color var(--nrpb-transition),
+			box-shadow var(--nrpb-transition);
+
+		@include m.focus-ring-within;
+
+		&:hover:not(:disabled) {
+			background: var(--nrpb-color-surface);
+			border-color: var(--nrpb-color-border-focus);
+			color: var(--nrpb-color-primary);
+		}
+
+		&.is-active {
+			background: var(--nrpb-color-primary);
+			border-color: var(--nrpb-color-primary);
+			color: #fff;
+			font-weight: 700;
+			pointer-events: none;
+			box-shadow: var(--nrpb-shadow-primary);
+		}
+
+		&:disabled {
+			opacity: 0.35;
+			cursor: not-allowed;
+		}
+
+		&--prev,
+		&--next {
+			font-size: var(--nrpb-font-size-sm);
+			letter-spacing: 0.01em;
+		}
+	}
+}

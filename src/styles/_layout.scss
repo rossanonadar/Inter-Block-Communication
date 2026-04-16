@@ -1,0 +1,70 @@
+// =============================================================================
+// Layout — Page wrapper, grid, spacing
+// =============================================================================
+
+@use 'mixins' as m;
+
+// ---- Page gutter wrapper -----------------------------------------------------
+// Applied automatically to both blocks so the content breathes on every page.
+
+.nrpb-posts-filter,
+.nrpb-posts-grid {
+	padding-inline: var(--nrpb-page-gutter);
+
+	@include m.respond-down(sm) {
+		padding-inline: var(--nrpb-space-md);
+	}
+}
+
+// ---- Posts Grid layout -------------------------------------------------------
+
+.nrpb-posts-grid {
+	position: relative;
+	width: 100%;
+
+	// Loading state — dim the inner grid while fetching
+	&.is-loading .nrpb-posts-grid__inner {
+		opacity: 0.45;
+		pointer-events: none;
+		transition: opacity var(--nrpb-transition);
+	}
+
+	&__inner {
+		display: grid;
+		grid-template-columns: repeat(var(--nrpb-columns, 3), 1fr);
+		gap: var(--nrpb-gap);
+		transition: opacity var(--nrpb-transition);
+
+		@include m.respond-down(lg) {
+			grid-template-columns: repeat(2, 1fr);
+		}
+
+		@include m.respond-down(sm) {
+			grid-template-columns: 1fr;
+		}
+	}
+
+	&__no-results,
+	&__error {
+		grid-column: 1 / -1;
+		text-align: center;
+		padding: var(--nrpb-space-xl) var(--nrpb-space-lg);
+		color: var(--nrpb-color-text-muted);
+		font-size: var(--nrpb-font-size-md);
+
+		&::before {
+			content: '🔍';
+			display: block;
+			font-size: 2rem;
+			margin-bottom: var(--nrpb-space-sm);
+		}
+	}
+
+	&__error::before {
+		content: '⚠️';
+	}
+
+	&__pagination {
+		margin-top: var(--nrpb-space-lg);
+	}
+}
