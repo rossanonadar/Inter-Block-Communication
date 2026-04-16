@@ -42,10 +42,9 @@ class Blocks {
 		];
 
 		foreach ( $blocks as $block ) {
-			$block_dir = NRPB_PLUGIN_DIR . 'src/blocks/' . $block;
-
+			// Register from build/ — block.json and compiled assets live together.
 			register_block_type(
-				$block_dir,
+				NRPB_BUILD_DIR . $block . '.block.json',
 				$this->get_block_args( $block )
 			);
 		}
