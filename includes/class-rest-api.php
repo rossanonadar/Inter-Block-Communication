@@ -133,10 +133,10 @@ class REST_API {
 	 * @return array<mixed>
 	 */
 	private function build_tax_query( array $category_ids, array $tag_ids ): array {
-		$tax_query = [ 'relation' => 'AND' ];
+		$clauses = [];
 
 		if ( ! empty( $category_ids ) ) {
-			$tax_query[] = [
+			$clauses[] = [
 				'taxonomy' => 'category',
 				'field'    => 'term_id',
 				'terms'    => $category_ids,
@@ -145,7 +145,7 @@ class REST_API {
 		}
 
 		if ( ! empty( $tag_ids ) ) {
-			$tax_query[] = [
+			$clauses[] = [
 				'taxonomy' => 'post_tag',
 				'field'    => 'term_id',
 				'terms'    => $tag_ids,
@@ -153,7 +153,18 @@ class REST_API {
 			];
 		}
 
-		return $tax_query;
+		// No filters selected → no tax constraint.
+		if ( empty( $clauses ) ) {
+			return [];
+		}
+
+		// Single clause → relation key is meaningless and potentially ambiguous.
+		if ( count( $clauses ) === 1 ) {
+			return $clauses;
+		}
+
+		// Two clauses → AND between category and tag constraints.
+		return array_merge( [ 'relation' => 'AND' ], $clauses );
 	}
 
 	/**
