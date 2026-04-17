@@ -43,7 +43,8 @@ export class PostsGrid {
 		this.columns = parseInt( el.dataset.columns ?? '3', 10 );
 
 		this.bindEvents();
-		this.fetchPosts();
+		// No initial fetchPosts() — PHP is the source of truth for the first render.
+		// JS only fetches when the user changes a filter or clicks a pagination button.
 	}
 
 	bindEvents() {
@@ -66,6 +67,28 @@ export class PostsGrid {
 			},
 			{ signal: this.listenerController.signal }
 		);
+
+		// Delegated pagination click handler — covers both PHP-rendered (initial)
+		// and JS-rendered (post-fetch) buttons without re-binding on every render.
+		const paginationEl = this.el.querySelector( '.nrpb-pagination' );
+		if ( paginationEl ) {
+			paginationEl.addEventListener(
+				'click',
+				( e ) => {
+					const btn = e.target.closest( '[data-page]' );
+					if ( ! btn || btn.disabled || btn.getAttribute( 'aria-disabled' ) === 'true' ) {
+						return;
+					}
+					const page = parseInt( btn.dataset.page, 10 );
+					if ( ! isNaN( page ) && page !== this.currentPage ) {
+						this.currentPage = page;
+						this.fetchPosts();
+						this.el.scrollIntoView( { behavior: 'smooth', block: 'start' } );
+					}
+				},
+				{ signal: this.listenerController.signal }
+			);
+		}
 	}
 
 	/**
@@ -235,17 +258,7 @@ export class PostsGrid {
 		` );
 
 		paginationEl.innerHTML = buttons.join( '' );
-
-		paginationEl.querySelectorAll( '[data-page]' ).forEach( ( btn ) => {
-			btn.addEventListener( 'click', ( e ) => {
-				const page = parseInt( e.currentTarget.dataset.page, 10 );
-				if ( ! isNaN( page ) && page !== this.currentPage ) {
-					this.currentPage = page;
-					this.fetchPosts();
-					this.el.scrollIntoView( { behavior: 'smooth', block: 'start' } );
-				}
-			} );
-		} );
+		// Click handling is delegated — see bindEvents().
 	}
 
 	renderError() {
