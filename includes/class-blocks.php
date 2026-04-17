@@ -89,6 +89,7 @@ class Blocks {
 		];
 
 		$query = new \WP_Query( $query_args );
+		$total_pages = (int) $query->max_num_pages;
 
 		ob_start();
 		?>
@@ -112,14 +113,12 @@ class Blocks {
 				<?php endif; ?>
 			</div>
 
-			<?php if ( ! empty( $content ) ) : ?>
-				<div class="nrpb-posts-grid__pagination">
-					<?php
-					// Inner blocks output (pagination block).
-					echo $content; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-					?>
-				</div>
-			<?php endif; ?>
+			<div class="nrpb-posts-grid__pagination">
+				<?php
+				// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+				echo $this->render_pagination_html( $paged, $total_pages );
+				?>
+			</div>
 		</div>
 		<?php
 		return ob_get_clean();
@@ -129,6 +128,17 @@ class Blocks {
 	 * Renders a single post card.
 	 */
 	private function render_post_card(): void {
+		global $post;
+
+		$categories = wp_get_post_categories( $post->ID, [ 'fields' => 'all' ] );
+		$tags       = wp_get_post_tags( $post->ID, [ 'fields' => 'all' ] );
+
+		// Primary category — first non-default category only.
+		$default_cat_id  = (int) get_option( 'default_category' );
+		$valid_categories = is_array( $categories )
+			? array_values( array_filter( $categories, fn( $c ) => $c->term_id !== $default_cat_id ) )
+			: [];
+		$primary_category = $valid_categories[0] ?? null;
 		?>
 		<article class="nrpb-post-card" data-post-id="<?php the_ID(); ?>">
 			<?php if ( has_post_thumbnail() ) : ?>
@@ -140,6 +150,15 @@ class Blocks {
 			<?php endif; ?>
 
 			<div class="nrpb-post-card__body">
+				<?php if ( $primary_category ) : ?>
+					<span
+						class="nrpb-post-card__category"
+						data-slug="<?php echo esc_attr( $primary_category->slug ); ?>"
+					>
+						<?php echo esc_html( $primary_category->name ); ?>
+					</span>
+				<?php endif; ?>
+
 				<h3 class="nrpb-post-card__title">
 					<a href="<?php the_permalink(); ?>"><?php the_title(); ?></a>
 				</h3>
@@ -147,6 +166,16 @@ class Blocks {
 				<div class="nrpb-post-card__excerpt">
 					<?php the_excerpt(); ?>
 				</div>
+
+				<?php if ( ! empty( $tags ) ) : ?>
+					<div class="nrpb-post-card__tags" aria-label="<?php esc_attr_e( 'Tags', 'nr-posts-blocks' ); ?>">
+						<?php foreach ( $tags as $tag ) : ?>
+							<span class="nrpb-post-card__tag">
+								#<?php echo esc_html( $tag->name ); ?>
+							</span>
+						<?php endforeach; ?>
+					</div>
+				<?php endif; ?>
 
 				<a class="nrpb-post-card__read-more" href="<?php the_permalink(); ?>">
 					<?php esc_html_e( 'Read more', 'nr-posts-blocks' ); ?>
@@ -253,11 +282,69 @@ class Blocks {
 	/**
 	 * Render callback for the Pagination block.
 	 *
-	 * @param array<string, mixed> $attributes Block attributes.
+	 * Pagination HTML is rendered directly by render_posts_grid() which has access
+	 * to the WP_Query result. This callback returns an empty string so that the
+	 * inner-block slot produces no duplicate output.
+	 *
+	 * @param array<string, mixed> $attributes Block attributes (unused).
 	 * @return string
 	 */
 	public function render_pagination( array $attributes ): string {
-		return '<div class="nrpb-pagination" aria-label="' . esc_attr__( 'Posts navigation', 'nr-posts-blocks' ) . '"></div>';
+		return '';
+	}
+
+	/**
+	 * Builds the pagination HTML that matches the JS renderPagination() output
+	 * exactly so that both server-rendered and JS-rendered states are identical.
+	 *
+	 * @param int $current_page Current page number.
+	 * @param int $total_pages  Total number of pages.
+	 * @return string
+	 */
+	private function render_pagination_html( int $current_page, int $total_pages ): string {
+		$label = esc_attr__( 'Posts navigation', 'nr-posts-blocks' );
+		$html  = '<div class="nrpb-pagination" aria-label="' . $label . '">';
+
+		if ( $total_pages > 1 ) {
+			// Previous button.
+			$prev_page    = $current_page - 1;
+			$prev_disabled = $current_page <= 1 ? ' disabled aria-disabled="true"' : '';
+			$html .= sprintf(
+				'<button class="nrpb-pagination__btn nrpb-pagination__btn--prev" data-page="%d"%s aria-label="%s">&#8592; Prev</button>',
+				$prev_page,
+				$prev_disabled,
+				esc_attr__( 'Previous page', 'nr-posts-blocks' )
+			);
+
+			// Page number buttons.
+			for ( $i = 1; $i <= $total_pages; $i++ ) {
+				$is_active    = $i === $current_page;
+				$active_class = $is_active ? ' is-active' : '';
+				$aria_current = $is_active ? 'page' : 'false';
+				$html .= sprintf(
+					'<button class="nrpb-pagination__btn nrpb-pagination__btn--page%s" data-page="%d" aria-label="%s" aria-current="%s">%d</button>',
+					$active_class,
+					$i,
+					/* translators: %d: page number */
+					esc_attr( sprintf( __( 'Page %d', 'nr-posts-blocks' ), $i ) ),
+					$aria_current,
+					$i
+				);
+			}
+
+			// Next button.
+			$next_page     = $current_page + 1;
+			$next_disabled = $current_page >= $total_pages ? ' disabled aria-disabled="true"' : '';
+			$html .= sprintf(
+				'<button class="nrpb-pagination__btn nrpb-pagination__btn--next" data-page="%d"%s aria-label="%s">Next &#8594;</button>',
+				$next_page,
+				$next_disabled,
+				esc_attr__( 'Next page', 'nr-posts-blocks' )
+			);
+		}
+
+		$html .= '</div>';
+		return $html;
 	}
 
 	/**

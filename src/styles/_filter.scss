@@ -15,6 +15,11 @@
 	box-shadow: var(--nrpb-shadow-sm);
 	overflow: hidden;
 
+	// Stack everything vertically below the md breakpoint
+	@include m.respond-down(md) {
+		flex-direction: column;
+	}
+
 	// ---- Filter group (categories / tags) ------------------------------------
 
 	&__group {
@@ -38,6 +43,10 @@
 				border-top: 1px solid var(--nrpb-color-border);
 			}
 		}
+
+		@include m.respond-down(md) {
+			width: 100%;
+		}
 	}
 
 	&__label {
@@ -60,16 +69,22 @@
 
 	&__list {
 		display: flex;
-		flex-wrap: nowrap;        // never break to a second line
+		flex-wrap: nowrap;        // never break to a second line on desktop
 		gap: var(--nrpb-space-xs);
 		list-style: none;
 		margin: 0;
 		padding: 0;
-		overflow-x: auto;         // scroll if pills overflow
+		overflow-x: auto;         // scroll if pills overflow on desktop
 		scrollbar-width: none;    // hide scrollbar (Firefox)
 
 		&::-webkit-scrollbar {
 			display: none;        // hide scrollbar (Chrome/Safari)
+		}
+
+		// Below md — wrap pills so all options are visible without horizontal scroll
+		@include m.respond-down(md) {
+			flex-wrap: wrap;
+			overflow-x: visible;
 		}
 	}
 
