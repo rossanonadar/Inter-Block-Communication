@@ -38,5 +38,8 @@
       "margin": true
     }
   },
-  "allowedBlocks": ["nrpb/pagination"]
+  "allowedBlocks": ["nrpb/pagination"],
+  "providesContext": {
+    "nrpb/postsPerPage": "postsPerPage"
+  }
 }

@@ -14,6 +14,7 @@
   "editorStyle": "file:../../../build/pagination.css",
   "style": "file:../../../build/frontend.css",
   "attributes": {},
+  "usesContext": ["nrpb/postsPerPage"],
   "supports": {
     "html": false,
     "inserter": false

@@ -214,7 +214,6 @@ class Seeder {
 			}
 
 			wp_set_post_categories( $post_id, $post_data['categories'] );
-			wp_set_post_tags( $post_id, [] );
 			wp_set_object_terms( $post_id, $post_data['tags'], 'post_tag' );
 
 			$attachment_id = $this->create_placeholder_image(

@@ -89,7 +89,6 @@ class Blocks {
 		];
 
 		$query = new \WP_Query( $query_args );
-		$total_pages = (int) $query->max_num_pages;
 
 		ob_start();
 		?>
@@ -115,8 +114,9 @@ class Blocks {
 
 			<div class="nrpb-posts-grid__pagination">
 				<?php
+				// $content is the rendered output of the nrpb/pagination inner block.
 				// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-				echo $this->render_pagination_html( $paged, $total_pages );
+				echo $content;
 				?>
 			</div>
 		</div>
@@ -143,7 +143,7 @@ class Blocks {
 		<article class="nrpb-post-card" data-post-id="<?php the_ID(); ?>">
 			<?php if ( has_post_thumbnail() ) : ?>
 				<div class="nrpb-post-card__image">
-					<a href="<?php the_permalink(); ?>" tabindex="-1" aria-hidden="true">
+					<a href="<?php echo esc_url( get_permalink() ); ?>" tabindex="-1" aria-hidden="true">
 						<?php the_post_thumbnail( 'medium_large' ); ?>
 					</a>
 				</div>
@@ -160,7 +160,7 @@ class Blocks {
 				<?php endif; ?>
 
 				<h3 class="nrpb-post-card__title">
-					<a href="<?php the_permalink(); ?>"><?php the_title(); ?></a>
+					<a href="<?php echo esc_url( get_permalink() ); ?>"><?php echo esc_html( get_the_title() ); ?></a>
 				</h3>
 
 				<div class="nrpb-post-card__excerpt">
@@ -177,7 +177,7 @@ class Blocks {
 					</div>
 				<?php endif; ?>
 
-				<a class="nrpb-post-card__read-more" href="<?php the_permalink(); ?>">
+				<a class="nrpb-post-card__read-more" href="<?php echo esc_url( get_permalink() ); ?>">
 					<?php esc_html_e( 'Read more', 'nr-posts-blocks' ); ?>
 				</a>
 			</div>
@@ -282,15 +282,35 @@ class Blocks {
 	/**
 	 * Render callback for the Pagination block.
 	 *
-	 * Pagination HTML is rendered directly by render_posts_grid() which has access
-	 * to the WP_Query result. This callback returns an empty string so that the
-	 * inner-block slot produces no duplicate output.
+	 * Reads postsPerPage from block context (provided by the parent posts-grid block
+	 * via providesContext) and runs a lightweight count-only query to determine
+	 * total_pages. This keeps pagination self-contained as a true inner block.
 	 *
 	 * @param array<string, mixed> $attributes Block attributes (unused).
+	 * @param string               $content    Inner content (empty for this block).
+	 * @param \WP_Block            $block      Block instance — carries context from parent.
 	 * @return string
 	 */
-	public function render_pagination( array $attributes ): string {
-		return '';
+	public function render_pagination( array $attributes, string $content, \WP_Block $block ): string {
+		$posts_per_page = absint( $block->context['nrpb/postsPerPage'] ?? 6 );
+		$paged          = absint( get_query_var( 'nrpb_page', 1 ) );
+
+		// Lightweight count query — fetches IDs only, no meta/term cache warmup.
+		$count_query = new \WP_Query(
+			[
+				'post_type'              => 'post',
+				'post_status'            => 'publish',
+				'posts_per_page'         => $posts_per_page,
+				'paged'                  => $paged,
+				'has_password'           => false,
+				'fields'                 => 'ids',
+				'no_found_rows'          => false,
+				'update_post_meta_cache' => false,
+				'update_post_term_cache' => false,
+			]
+		);
+
+		return $this->render_pagination_html( $paged, (int) $count_query->max_num_pages );
 	}
 
 	/**

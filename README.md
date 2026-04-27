@@ -230,8 +230,12 @@ nr-posts-blocks/
       "permalink": "https://example.com/post-slug/",
       "thumbnail_url": "https://example.com/wp-content/uploads/image.svg",
       "thumbnail_alt": "",
-      "categories": [3, 5],
-      "tags": [7]
+      "categories": [
+        { "id": 3, "name": "Technology", "slug": "nrpb-technology" }
+      ],
+      "tags": [
+        { "id": 7, "name": "Tutorial", "slug": "nrpb-tutorial" }
+      ]
     }
   ],
   "total": 12,

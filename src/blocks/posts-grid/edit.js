@@ -11,9 +11,8 @@ import {
 	Placeholder,
 	Spinner,
 } from '@wordpress/components';
-import { useEffect } from '@wordpress/element';
+import { useEffect, useState } from '@wordpress/element';
 import apiFetch from '@wordpress/api-fetch';
-import { useState } from '@wordpress/element';
 import { addQueryArgs } from '@wordpress/url';
 
 const ALLOWED_BLOCKS = [ 'nrpb/pagination' ];
