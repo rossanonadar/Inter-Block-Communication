@@ -325,7 +325,8 @@ class Blocks {
 					<?php echo wp_interactivity_data_wp_context( [ 'blockId' => $block_id ] ); ?>
 					data-wp-on--click="actions.clearFilters"
 					aria-label="<?php esc_attr_e( 'Clear filters', 'nr-posts-blocks' ); ?>"
-					hidden
+					aria-hidden="true"
+					tabindex="-1"
 				></button>
 			</div>
 		</div>

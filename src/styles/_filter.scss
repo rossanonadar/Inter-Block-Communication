@@ -173,10 +173,24 @@
 		border-radius: 50%;
 		cursor: pointer;
 		padding: 0;
+
+		// Default: invisible but always occupies its slot — no layout shift.
+		opacity: 0;
+		visibility: hidden;
+		pointer-events: none;
+
 		transition:
+			opacity var(--nrpb-transition),
+			visibility var(--nrpb-transition),
 			color var(--nrpb-transition),
 			background var(--nrpb-transition),
 			border-color var(--nrpb-transition);
+
+		&.is-visible {
+			opacity: 1;
+			visibility: visible;
+			pointer-events: auto;
+		}
 
 		@include m.focus-ring-within;
 

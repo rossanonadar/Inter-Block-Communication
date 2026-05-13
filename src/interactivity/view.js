@@ -153,7 +153,10 @@ function updateClearButton( blockId ) {
 	const btn = filterEl?.querySelector( '.nrpb-posts-filter__clear' );
 	if ( ! btn ) return;
 	const filter = state.filters[ blockId ];
-	btn.hidden = ! ( filter?.categories.length || filter?.tags.length );
+	const hasActive = Boolean( filter?.categories.length || filter?.tags.length );
+	btn.classList.toggle( 'is-visible', hasActive );
+	btn.setAttribute( 'aria-hidden', String( ! hasActive ) );
+	btn.tabIndex = hasActive ? 0 : -1;
 }
 
 /** @param {string} blockId */
