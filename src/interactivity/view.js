@@ -118,7 +118,7 @@ function renderPagination( blockId, currentPage, totalPages ) {
  * Adds/removes the `is-active` class and updates `aria-pressed` on every
  * filter button for the given block, driven directly from state.
  *
- * Called imperatively instead of relying on data-wp-class:is-active because
+ * Called imperatively instead of relying on data-wp-class--is-active because
  * Preact signal subscriptions track the deepest proxy accessed; replacing the
  * top-level state.filters object orphans nested array subscriptions, so the
  * reactive directive never re-fires. Imperative DOM updates are guaranteed.

@@ -121,8 +121,8 @@ class Blocks {
 			data-wp-interactive="nrpb"
 			<?php echo wp_interactivity_data_wp_context( [ 'blockId' => $block_id, 'postsPerPage' => $posts_per_page ] ); ?>
 			data-wp-init="callbacks.initGrid"
-			data-wp-class:is-loading="state.isLoading"
-			data-wp-bind:aria-busy="state.isLoading"
+			data-wp-class--is-loading="state.isLoading"
+			data-wp-bind--aria-busy="state.isLoading"
 			data-columns="<?php echo esc_attr( (string) $columns ); ?>"
 			data-posts-per-page="<?php echo esc_attr( (string) $posts_per_page ); ?>"
 			data-block-id="<?php echo esc_attr( $block_id ); ?>"
