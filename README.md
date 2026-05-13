@@ -33,7 +33,7 @@ All seeded slugs are prefixed with `nrpb-` to avoid collisions. A `nrpb_seeded_v
 
 ## Requirements
 
-- WordPress 6.3+
+- WordPress 6.6+ (Interactivity API stable)
 - PHP 8.0+
 - Node.js 18+ / npm 9+ (development only)
 
@@ -41,47 +41,60 @@ All seeded slugs are prefixed with `nrpb-` to avoid collisions. A `nrpb_seeded_v
 
 ## Architecture Decisions
 
-### 1. Inter-Block Communication: `CustomEvent` on `document`
+### 1. Inter-Block Communication: WordPress Interactivity API
 
 This was the central design question. The filter and grid blocks must stay in sync without being nested inside each other.
 
-**What I chose:** a `CustomEvent` bus dispatched on `document`.
+**What I chose:** the [WordPress Interactivity API](https://developer.wordpress.org/block-editor/reference-guides/interactivity-api/), introduced in WordPress 6.5.
 
-When the user toggles a filter, `PostsFilter` fires:
+All frontend logic lives in `src/interactivity/view.js`, registered as a Script Module (`viewScriptModule` in `block.json`). The store is namespaced `nrpb` and exposes `state`, `actions`, and `callbacks`.
 
-```js
-document.dispatchEvent(new CustomEvent('nrpb:filter-change', {
-  detail: { blockId, categories: [...], tags: [...] }
-}));
-```
-
-`PostsGrid` listens and re-fetches:
+**State shape — keyed by `blockId`:**
 
 ```js
-document.addEventListener('nrpb:filter-change', (e) => {
-  if (e.detail.blockId !== this.blockId) return;
-  this.fetchPosts();
-});
+// Seeded from PHP via wp_interactivity_state() in each block's render callback.
+state.filters[blockId] = { categories: [], tags: [], page: 1 }
+state.grids[blockId]   = { postsPerPage: 6, totalPages: 1 }
+state.loadingBlocks    = []   // array of blockIds currently fetching
 ```
 
-The `blockId` attribute is assigned from the block's `clientId` on first render and serialized into the block markup. This lets multiple filter+grid pairs coexist on the same page independently.
+Keying by `blockId` means multiple Filter + Grid pairs on the same page are fully isolated — the same guarantee that the previous `CustomEvent` approach provided via `blockId` matching.
+
+**Data flow:**
+
+1. The user clicks a filter button (`data-wp-on--click="actions.toggleFilter"`).
+2. `toggleFilter` reads `blockId`, `filterId`, and `filterType` from the button's `data-wp-context`.
+3. `state.filters` is replaced at the top level so Preact signal subscriptions fire reliably.
+4. Two imperative helpers run synchronously: `updateFilterButtons(blockId)` (adds/removes `.is-active` and sets `aria-pressed`) and `updateClearButton(blockId)` (shows/hides the clear button via `hidden`).
+5. `_syncFilterURL(blockId)` writes the selection to `?nrpb_categories=…&nrpb_tags=…` via `history.replaceState`.
+6. `_fetchPosts(blockId)` cancels any in-flight request for the same `blockId` with an `AbortController`, then fetches the REST endpoint and re-renders posts and pagination.
+
+**URL params (preserved across page loads and back/forward navigation):**
+
+| Param | Type | Example |
+|-------|------|---------|
+| `nrpb_categories` | Comma-separated term IDs | `?nrpb_categories=3,5` |
+| `nrpb_tags` | Comma-separated term IDs | `?nrpb_tags=7` |
+| `nrpb_page` | Integer | `?nrpb_page=2` |
+
+On mount (`callbacks.initFilter`, `callbacks.initGrid`) the store reads these params and restores filter + page state before the first fetch. The `popstate` listener keeps state in sync when the user navigates with the browser's back/forward buttons.
 
 **Why not the alternatives:**
 
 | Approach | Why ruled out |
 |----------|---------------|
-| **URL query params** | Requires a full page reload. Breaks if the grid is not the primary content. Pollutes the browser history. |
-| **Shared parent / InnerBlocks nesting** | Forces a rigid DOM hierarchy. The brief explicitly requires independent placement. |
+| **`CustomEvent` on `document`** | One-directional; no built-in URL persistence; filter state resets on page load. Replaced by the Interactivity API in this version. |
+| **Shared parent / InnerBlocks nesting** | Forces a rigid DOM hierarchy. The brief explicitly requires independent block placement. |
 | **`wp.data` store** | Only available inside the block editor. Not accessible on the frontend without a full React tree. |
-| **`localStorage` / `sessionStorage`** | No native broadcast to same-tab listeners without polling. Also persists across pages unintentionally. |
-| **URL hash / `history.pushState`** | Same reload problem as query params for SSR content. Adds complexity with no benefit. |
+| **`localStorage` / `sessionStorage`** | No native broadcast to same-tab listeners without polling. Persists across pages unintentionally. |
 | **Shared React context / Redux** | Would require a shared root component wrapping both blocks — effectively the same constraint as a shared parent. |
 
-**Tradeoffs of `CustomEvent`:**
-- Pro: synchronous, zero dependencies, works anywhere in the DOM regardless of block placement.
-- Pro: multiple isolated pairs work automatically via `blockId` matching.
-- Con: communication is one-directional (filter → grid). If you needed grid-to-filter sync (e.g. back/forward navigation restoring filter state), you'd need to extend this or add URL state.
-- Con: not persistent across page loads — filters reset on navigation.
+**Tradeoffs of the Interactivity API:**
+- Pro: first-party WordPress API; no external dependencies; survives theme switches.
+- Pro: `data-wp-*` directives keep PHP templates declarative; logic stays in one JS file.
+- Pro: URL params give full progressive enhancement — filtered views are shareable and survive hard reloads.
+- Con: requires WordPress 6.6+; not available on older installs without a polyfill.
+- Con: Preact signal subscriptions track the deepest proxy accessed. Replacing `state.filters` at the top level orphans nested array subscriptions, requiring imperative DOM helpers (`updateFilterButtons`, `updateClearButton`) instead of reactive directives for active-state and clear-button visibility.
 
 ---
 
@@ -96,7 +109,7 @@ All three blocks use PHP render callbacks instead of JavaScript `save()` output.
 **`save()` convention used:**
 - `posts-grid`: returns `<InnerBlocks.Content />` — only the inner block markup is stored in `post_content`. The PHP callback provides the outer wrapper.
 - `posts-filter`: returns `null` — fully server-rendered.
-- `pagination`: returns `null` — fully server-rendered, populated by the frontend JS after each fetch.
+- `pagination`: returns `null` — fully server-rendered, replaced by JS-rendered HTML after each fetch.
 
 ---
 
@@ -131,21 +144,29 @@ This matches the spec: *"OR within the same filter type, AND across filter types
 
 **Why a custom endpoint instead of the core `/wp/v2/posts`:** the core endpoint supports `categories` and `tags` filtering but always applies AND logic between taxonomies when using multiple parameters. It also returns full post objects with unnecessary fields. A custom endpoint gives us explicit control over the tax_query logic and a lean response shape.
 
+Response caching is handled inside the REST controller with `wp_cache_get` / `wp_cache_set` keyed by query parameters. The Interactivity API store hits this endpoint on every filter change; caching prevents redundant database queries for repeated param combinations.
+
 **Tradeoff:** maintaining a custom endpoint adds surface area. If WordPress core changes how `WP_Query` handles `tax_query`, we own that upgrade path. For this scope it's the right call.
 
 ---
 
-### 5. Build System: Custom Webpack over `@wordpress/scripts`
+### 5. Build System: Two-Config Webpack
 
-**What I chose:** a hand-written `webpack.config.js` instead of the official `@wordpress/scripts` package.
+**What I chose:** a hand-written `webpack.config.js` with two separate Webpack configurations instead of the official `@wordpress/scripts` package.
 
-**Why:** `@wordpress/scripts` abstracts away the build config entirely, which makes it fast to start but hard to extend. For this project I needed explicit control over:
-- Multiple entry points compiled to a flat `build/` directory
-- A custom `WordPressAssetPlugin` that generates `.asset.php` files with correct dependency arrays
+**Config 1 — `main` (CommonJS/IIFE output):**
+Compiles editor scripts (`posts-grid`, `posts-filter`, `pagination`) and the shared frontend CSS. Externalises all `@wordpress/*` packages against the global `wp.*` object. Emits `.asset.php` files with dependency arrays via a custom `WordPressAssetPlugin`.
+
+**Config 2 — `interactivity` (ES module output):**
+Compiles `src/interactivity/view.js` into an ES module (`type="module"`) required by the WordPress Script Modules API. `@wordpress/interactivity` is externalised — WordPress provides it via an import map at runtime. The block's `block.json` registers the output via `viewScriptModule`.
+
+**Why not `@wordpress/scripts`:** `@wordpress/scripts` abstracts away the build config entirely, which makes it fast to start but hard to extend. For this project explicit control was needed over:
+- The two-target output (IIFE + ES module)
+- Custom `.asset.php` generation with exact dependency arrays
 - A `CopyWebpackPlugin` pass that rewrites `block.json` file paths for the build target
 - Sass with the modern API
 
-**Tradeoff:** `@wordpress/scripts` would have handled the `.asset.php` generation automatically and would track WordPress package version changes in its own dependency tree. With a custom config, keeping WordPress package versions in sync is a manual concern.
+**Tradeoff:** `@wordpress/scripts` would have handled `.asset.php` generation automatically and tracks WordPress package versions in its own dependency tree. With a custom config, keeping package versions in sync is a manual concern.
 
 ---
 
@@ -163,12 +184,10 @@ Featured images are generated programmatically as SVG files with a gradient back
 
 | Area | Limitation |
 |------|------------|
-| **Filter state** | Not persisted in the URL. Using the browser back button after filtering resets the grid to page 1 with no active filters. |
-| **SEO** | Filtered results are not crawlable. The initial server-rendered grid (no filters applied) is fully SEO-friendly; filtered states are client-side only. |
-| **Accessibility** | Filter changes trigger a live region update via `aria-busy` on the grid, but a proper `aria-live` region announcing result counts is not implemented. |
+| **SEO** | Filtered results are not crawlable. The initial server-rendered grid (no filters applied) is fully SEO-friendly; filtered states are client-side only. URL params allow search engines to index specific filtered views only if they execute JavaScript. |
+| **Accessibility** | Filter changes trigger `aria-busy` on the grid, but a proper `aria-live` region announcing result counts is not implemented. |
 | **SVG images** | WordPress does not generate srcset for SVG attachments. Real content should use JPEG/WebP images. |
-| **Pagination + filters** | Changing filters resets to page 1 (correct), but the page number is not reflected in the URL, so sharing a deep-paginated filtered view is not possible. |
-| **No server-side filter render** | The first server render always shows all posts. Filters only activate after the JS loads. This is a standard tradeoff for client-side filtering; progressive enhancement via URL params would address it. |
+| **WordPress version** | The Interactivity API requires WordPress 6.6+. Older installs are not supported without a polyfill. |
 
 ---
 
@@ -187,10 +206,10 @@ nr-posts-blocks/
 │   │   ├── posts-filter/        # block.json, edit.js (read-only preview), index.js
 │   │   └── pagination/          # block.json, index.js (inner block, editor hint only)
 │   ├── frontend/
-│   │   ├── index.js             # DOMContentLoaded — mounts PostsGrid + PostsFilter
-│   │   ├── posts-grid.js        # Fetch, render cards, render pagination, handle filter events
-│   │   ├── posts-filter.js      # Toggle state, dispatch nrpb:filter-change CustomEvent
+│   │   ├── index.js             # Entry point (currently a no-op stub; logic lives in interactivity/)
 │   │   └── style.scss           # Entry point — imports all partials in order
+│   ├── interactivity/
+│   │   └── view.js              # Interactivity API store: state, actions, callbacks for filter + grid
 │   └── styles/
 │       ├── _variables.scss      # CSS custom properties + SCSS build-time constants
 │       ├── _mixins.scss         # respond-up/down, focus-ring, line-clamp, flex helpers
@@ -200,7 +219,7 @@ nr-posts-blocks/
 │       ├── _pagination.scss     # Pagination buttons
 │       └── _editor.scss         # Editor-only hints
 ├── build/                       # Webpack output (gitignored)
-├── webpack.config.js            # Custom build: entries, externals, asset.php generation, block.json copy
+├── webpack.config.js            # Two-config build: IIFE for editor, ES module for interactivity view
 ├── package.json
 ├── .gitignore
 └── README.md
