@@ -72,7 +72,11 @@
 }
 
 // ---- Utility -----------------------------------------------------------------
+// Scoped to our block wrappers to avoid colliding with theme/plugin .is-hidden rules.
 
-.is-hidden {
-	display: none !important;
+.nrpb-posts-grid,
+.nrpb-posts-filter {
+	.is-hidden {
+		display: none !important;
+	}
 }
