@@ -79,6 +79,7 @@ class Blocks {
 		$columns        = absint( $attributes['columns'] ?? 3 );
 		$posts_per_page = absint( $attributes['postsPerPage'] ?? 6 );
 		$paged          = absint( get_query_var( 'nrpb_page', 1 ) );
+		$block_id       = $attributes['blockId'] ?? '';
 
 		$query_args = [
 			'post_type'      => 'post',
@@ -90,13 +91,41 @@ class Blocks {
 
 		$query = new \WP_Query( $query_args );
 
+		// Seed per-instance state so the JS store has the right defaults before
+		// any user interaction. wp_interactivity_state() deep-merges on each call,
+		// so multiple grid blocks on the same page each register their own entry.
+		wp_interactivity_state(
+			'nrpb',
+			[
+				'filters' => [
+					$block_id => [
+						'categories' => [],
+						'tags'       => [],
+						'page'       => 1,
+					],
+				],
+				'grids'   => [
+					$block_id => [
+						'postsPerPage' => $posts_per_page,
+						'totalPages'   => (int) $query->max_num_pages,
+					],
+				],
+				'loadingBlocks' => [],
+			]
+		);
+
 		ob_start();
 		?>
 		<div
 			class="nrpb-posts-grid"
+			data-wp-interactive="nrpb"
+			<?php echo wp_interactivity_data_wp_context( [ 'blockId' => $block_id, 'postsPerPage' => $posts_per_page ] ); ?>
+			data-wp-init="callbacks.initGrid"
+			data-wp-class:is-loading="state.isLoading"
+			data-wp-bind:aria-busy="state.isLoading"
 			data-columns="<?php echo esc_attr( (string) $columns ); ?>"
 			data-posts-per-page="<?php echo esc_attr( (string) $posts_per_page ); ?>"
-			data-block-id="<?php echo esc_attr( $attributes['blockId'] ?? '' ); ?>"
+			data-block-id="<?php echo esc_attr( $block_id ); ?>"
 			style="--nrpb-columns: <?php echo esc_attr( (string) $columns ); ?>;"
 		>
 			<div class="nrpb-posts-grid__inner">
@@ -192,6 +221,7 @@ class Blocks {
 	 * @return string
 	 */
 	public function render_posts_filter( array $attributes ): string {
+		$block_id   = $attributes['blockId'] ?? '';
 		$categories = get_terms(
 			[
 				'taxonomy'   => 'category',
@@ -214,11 +244,29 @@ class Blocks {
 			$tags = [];
 		}
 
+		// Seed per-instance filter state. The grid block seeds the same blockId
+		// entry under state.filters; both calls deep-merge safely.
+		wp_interactivity_state(
+			'nrpb',
+			[
+				'filters' => [
+					$block_id => [
+						'categories' => [],
+						'tags'       => [],
+						'page'       => 1,
+					],
+				],
+			]
+		);
+
 		ob_start();
 		?>
 		<div
 			class="nrpb-posts-filter"
-			data-block-id="<?php echo esc_attr( $attributes['blockId'] ?? '' ); ?>"
+			data-wp-interactive="nrpb"
+			<?php echo wp_interactivity_data_wp_context( [ 'blockId' => $block_id ] ); ?>
+			data-wp-init="callbacks.initFilter"
+			data-block-id="<?php echo esc_attr( $block_id ); ?>"
 		>
 			<?php if ( ! empty( $categories ) ) : ?>
 				<div class="nrpb-posts-filter__group" data-filter-type="category">
@@ -232,6 +280,8 @@ class Blocks {
 									class="nrpb-posts-filter__btn"
 									data-filter-type="category"
 									data-filter-value="<?php echo esc_attr( (string) $category->term_id ); ?>"
+									<?php echo wp_interactivity_data_wp_context( [ 'blockId' => $block_id, 'filterId' => (int) $category->term_id, 'filterType' => 'category' ] ); ?>
+									data-wp-on--click="actions.toggleFilter"
 									aria-pressed="false"
 								>
 									<?php echo esc_html( $category->name ); ?>
@@ -255,6 +305,8 @@ class Blocks {
 									class="nrpb-posts-filter__btn"
 									data-filter-type="tag"
 									data-filter-value="<?php echo esc_attr( (string) $tag->term_id ); ?>"
+									<?php echo wp_interactivity_data_wp_context( [ 'blockId' => $block_id, 'filterId' => (int) $tag->term_id, 'filterType' => 'tag' ] ); ?>
+									data-wp-on--click="actions.toggleFilter"
 									aria-pressed="false"
 								>
 									<?php echo esc_html( $tag->name ); ?>
@@ -270,8 +322,10 @@ class Blocks {
 				<button
 					class="nrpb-posts-filter__clear"
 					type="button"
+					<?php echo wp_interactivity_data_wp_context( [ 'blockId' => $block_id ] ); ?>
+					data-wp-on--click="actions.clearFilters"
 					aria-label="<?php esc_attr_e( 'Clear filters', 'nr-posts-blocks' ); ?>"
-					aria-hidden="true"
+					hidden
 				></button>
 			</div>
 		</div>
@@ -340,9 +394,9 @@ class Blocks {
 			for ( $i = 1; $i <= $total_pages; $i++ ) {
 				$is_active    = $i === $current_page;
 				$active_class = $is_active ? ' is-active' : '';
-				$aria_current = $is_active ? 'page' : 'false';
+				$aria_current = $is_active ? ' aria-current="page"' : '';
 				$html .= sprintf(
-					'<button class="nrpb-pagination__btn nrpb-pagination__btn--page%s" data-page="%d" aria-label="%s" aria-current="%s">%d</button>',
+					'<button class="nrpb-pagination__btn nrpb-pagination__btn--page%s" data-page="%d" aria-label="%s"%s>%d</button>',
 					$active_class,
 					$i,
 					/* translators: %d: page number */

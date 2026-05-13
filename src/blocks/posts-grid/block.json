@@ -12,6 +12,7 @@
   "editorScript": "file:../../../build/posts-grid.js",
   "editorStyle": "file:../../../build/posts-grid.css",
   "style": "file:../../../build/frontend.css",
+  "viewScriptModule": "file:../../../build/nrpb-view.js",
   "attributes": {
     "blockId": {
       "type": "string",
@@ -28,6 +29,7 @@
   },
   "supports": {
     "html": false,
+    "interactivity": true,
     "align": ["wide", "full"],
     "color": {
       "background": true,
