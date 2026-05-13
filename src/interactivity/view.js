@@ -337,7 +337,13 @@ const { state, actions } = store( 'nrpb', {
 					renderError( blockId );
 				}
 			} finally {
-				state.loadingBlocks = state.loadingBlocks.filter( ( id ) => id !== blockId );
+				// Only the latest request for this blockId may clear loading state.
+				// An aborted (older) request must not evict the loading flag that the
+				// newer request already set.
+				if ( abortControllers[ blockId ] === controller ) {
+					delete abortControllers[ blockId ];
+					state.loadingBlocks = state.loadingBlocks.filter( ( id ) => id !== blockId );
+				}
 			}
 		},
 	},
