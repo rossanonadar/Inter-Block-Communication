@@ -91,6 +91,18 @@ class Blocks {
 
 		$query = new \WP_Query( $query_args );
 
+		// Expose REST URL, nonce, and default category ID via the Interactivity API
+		// config so view.js can use getConfig('nrpb') instead of window.nrpbData.
+		// wp_interactivity_config() deep-merges, so multiple grid blocks are safe.
+		wp_interactivity_config(
+			'nrpb',
+			[
+				'restUrl'           => esc_url_raw( rest_url( 'nrpb/v1' ) ),
+				'nonce'             => wp_create_nonce( 'wp_rest' ),
+				'defaultCategoryId' => (int) get_option( 'default_category' ),
+			]
+		);
+
 		// Seed per-instance state so the JS store has the right defaults before
 		// any user interaction. wp_interactivity_state() deep-merges on each call,
 		// so multiple grid blocks on the same page each register their own entry.
@@ -212,6 +224,12 @@ class Blocks {
 				echo $content;
 				?>
 			</div>
+
+			<p class="nrpb-posts-grid__status"
+			   role="status"
+			   aria-live="polite"
+			   aria-atomic="true"
+			   data-wp-text="state.statusMessage"></p>
 		</div>
 		<?php
 		return ob_get_clean();
@@ -540,16 +558,6 @@ class Blocks {
 			[],
 			NRPB_VERSION,
 			true
-		);
-
-		wp_localize_script(
-			'nrpb-frontend',
-			'nrpbData',
-			[
-				'restUrl'           => esc_url_raw( rest_url( 'nrpb/v1' ) ),
-				'nonce'             => wp_create_nonce( 'wp_rest' ),
-				'defaultCategoryId' => (int) get_option( 'default_category' ),
-			]
 		);
 
 		if ( file_exists( NRPB_BUILD_DIR . 'frontend.css' ) ) {

@@ -93,8 +93,10 @@ On mount (`callbacks.initFilter`, `callbacks.initGrid`) the store reads these pa
 - Pro: first-party WordPress API; no external dependencies; survives theme switches.
 - Pro: `data-wp-*` directives keep PHP templates declarative; logic stays in one JS file.
 - Pro: URL params give full progressive enhancement — filtered views are shareable and survive hard reloads.
+- Pro: `wp_interactivity_config()` / `getConfig()` replaces `wp_localize_script` — config travels with the block, not as a global window object.
 - Con: requires WordPress 6.6+; not available on older installs without a polyfill.
-- Con: Preact signal subscriptions track the deepest proxy accessed. Replacing `state.filters` at the top level orphans nested array subscriptions, requiring imperative DOM helpers (`updateFilterButtons`, `updateClearButton`) instead of reactive directives for active-state and clear-button visibility.
+- Con: State mutations must be in-place (`state.filters[blockId].categories = updated`). Replacing the entire object at the top level orphans Preact signal subscriptions and breaks reactive directives.
+- Con: `blockId` is assigned once on first insertion from Gutenberg's ephemeral `clientId`. Duplicating a block in the editor copies the `blockId` attribute; the `if (!blockId)` guard will not regenerate it, leaving both blocks sharing the same state slot on the frontend. The workaround for the demo is to manually set matching blockIds on paired filter+grid blocks, which the seeder does automatically.
 
 ---
 
@@ -185,7 +187,8 @@ Featured images are generated programmatically as SVG files with a gradient back
 | Area | Limitation |
 |------|------------|
 | **SEO** | Filtered results are not crawlable. The initial server-rendered grid (no filters applied) is fully SEO-friendly; filtered states are client-side only. URL params allow search engines to index specific filtered views only if they execute JavaScript. |
-| **Accessibility** | Filter changes trigger `aria-busy` on the grid, but a proper `aria-live` region announcing result counts is not implemented. |
+| **Accessibility** | Filter changes announce result count via an `aria-live="polite"` region. A full `aria-live` announcement for individual result titles is not implemented. |
+| **blockId duplication** | Duplicating a grid or filter block in the Gutenberg editor copies the `blockId` attribute. The `!blockId` guard in `edit.js` will not assign a new ID because the attribute is already set, leaving both blocks sharing the same state slot on the frontend. For the demo page this is handled by the seeder; new placements require manually matching blockIds between a filter and its paired grid. |
 | **SVG images** | WordPress does not generate srcset for SVG attachments. Real content should use JPEG/WebP images. |
 | **WordPress version** | The Interactivity API requires WordPress 6.6+. Older installs are not supported without a polyfill. |
 

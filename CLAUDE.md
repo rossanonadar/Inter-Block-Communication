@@ -65,6 +65,10 @@ Response shape: `{ posts[], total, total_pages, page }`.
 Posts include `id, title, excerpt, permalink, thumbnail_url, thumbnail_alt, categories[], tags[]`.  
 Caching via transients (10 min), invalidated on post save/delete/term change.
 
+## Frontend config
+
+REST URL, nonce, and default category ID are passed via `wp_interactivity_config( 'nrpb', [...] )` in `render_posts_grid()`. In view.js, read them with `getConfig( 'nrpb' )` at module level. Never use `window.nrpbData`.
+
 ## URL persistence
 
 | Param | Controls |

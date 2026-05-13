@@ -17,7 +17,12 @@
  * state.loadingBlocks       — blockIds with in-flight requests
  */
 
-import { store, getContext } from '@wordpress/interactivity';
+import { store, getContext, getConfig } from '@wordpress/interactivity';
+
+// Config seeded by wp_interactivity_config() in the PHP render callback.
+// Provides REST URL, nonce, and default category ID without a global window object.
+const { restUrl = '/wp-json/nrpb/v1', nonce = '', defaultCategoryId = 0 } =
+	getConfig( 'nrpb' ) ?? {};
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -105,16 +110,14 @@ const { state, actions } = store( 'nrpb', {
 
 		get postPrimaryCategory() {
 			const { post } = getContext();
-			const defaultCatId = window.nrpbData?.defaultCategoryId ?? 0;
 			if ( ! Array.isArray( post?.categories ) ) return { name: '', slug: '' };
-			return post.categories.find( ( c ) => c.id !== defaultCatId ) ?? { name: '', slug: '' };
+			return post.categories.find( ( c ) => c.id !== defaultCategoryId ) ?? { name: '', slug: '' };
 		},
 
 		get postHasPrimaryCategory() {
 			const { post } = getContext();
-			const defaultCatId = window.nrpbData?.defaultCategoryId ?? 0;
 			if ( ! Array.isArray( post?.categories ) ) return false;
-			return post.categories.some( ( c ) => c.id !== defaultCatId );
+			return post.categories.some( ( c ) => c.id !== defaultCategoryId );
 		},
 
 		get postHasTags() {
@@ -176,6 +179,20 @@ const { state, actions } = store( 'nrpb', {
 		get nextBtnIsDisabled() {
 			const { blockId } = getContext();
 			return state.pagination[ blockId ]?.nextDisabled ?? true;
+		},
+
+		// ---- Accessibility status announcement ----------------------------------
+		// Empty while loading (polite aria-live won't announce empty text).
+		// Announced once after each completed fetch.
+
+		get statusMessage() {
+			const { blockId } = getContext();
+			if ( state.loadingBlocks.includes( blockId ) ) return '';
+			if ( ! state.hasFetched[ blockId ] ) return '';
+			if ( state.hasError[ blockId ] ) return 'Something went wrong. Please try again.';
+			if ( ! state.hasResults[ blockId ] ) return 'No posts found.';
+			const count = ( state.posts[ blockId ] ?? [] ).length;
+			return count === 1 ? 'Showing 1 post.' : `Showing ${ count } posts.`;
 		},
 	},
 
@@ -312,9 +329,9 @@ const { state, actions } = store( 'nrpb', {
 
 			try {
 				const res = await fetch(
-					`${ window.nrpbData?.restUrl ?? '/wp-json/nrpb/v1' }/posts?${ params }`,
+					`${ restUrl }/posts?${ params }`,
 					{
-						headers: { 'X-WP-Nonce': window.nrpbData?.nonce ?? '' },
+						headers: { 'X-WP-Nonce': nonce },
 						signal:  controller.signal,
 					}
 				);
