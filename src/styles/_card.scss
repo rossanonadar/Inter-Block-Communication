@@ -114,6 +114,10 @@
 		color: var(--nrpb-color-text-light);
 		transition: color var(--nrpb-transition);
 
+		&::before {
+			content: '#';
+		}
+
 		&:hover {
 			color: var(--nrpb-color-text-muted);
 		}

@@ -111,6 +111,11 @@ class Blocks {
 					],
 				],
 				'loadingBlocks' => [],
+				'posts'      => [ $block_id => [] ],
+				'pagination' => [ $block_id => [] ],
+				'hasFetched' => [ $block_id => false ],
+				'hasResults' => [ $block_id => false ],
+				'hasError'   => [ $block_id => false ],
 			]
 		);
 
@@ -135,10 +140,69 @@ class Blocks {
 					<?php endwhile; ?>
 					<?php wp_reset_postdata(); ?>
 				<?php else : ?>
-					<p class="nrpb-posts-grid__no-results">
+					<p class="nrpb-posts-grid__no-results"
+					   data-wp-class--is-hidden="state.ssrIsHidden">
 						<?php esc_html_e( 'No posts found.', 'nr-posts-blocks' ); ?>
 					</p>
 				<?php endif; ?>
+
+				<template
+					data-wp-each--post="state.currentPosts"
+					data-wp-each-key="context.post.id"
+				>
+					<article class="nrpb-post-card">
+						<div class="nrpb-post-card__image"
+							 data-wp-class--is-hidden="!state.postHasImage">
+							<a data-wp-bind--href="context.post.permalink"
+							   tabindex="-1" aria-hidden="true">
+								<img data-wp-bind--src="context.post.thumbnail_url"
+									 data-wp-bind--alt="context.post.thumbnail_alt"
+									 loading="lazy" />
+							</a>
+						</div>
+
+						<div class="nrpb-post-card__body">
+							<span class="nrpb-post-card__category"
+								  data-wp-class--is-hidden="!state.postHasPrimaryCategory"
+								  data-wp-text="state.postPrimaryCategory.name">
+							</span>
+
+							<h3 class="nrpb-post-card__title">
+								<a data-wp-bind--href="context.post.permalink"
+								   data-wp-text="context.post.title"></a>
+							</h3>
+
+							<div class="nrpb-post-card__excerpt">
+								<p data-wp-text="context.post.excerpt"></p>
+							</div>
+
+							<div class="nrpb-post-card__tags"
+								 data-wp-class--is-hidden="!state.postHasTags"
+								 aria-label="<?php esc_attr_e( 'Tags', 'nr-posts-blocks' ); ?>">
+								<template data-wp-each--tag="state.postTags"
+										  data-wp-each-key="context.tag.id">
+									<span class="nrpb-post-card__tag"
+										  data-wp-text="context.tag.name"></span>
+								</template>
+							</div>
+
+							<a class="nrpb-post-card__read-more"
+							   data-wp-bind--href="context.post.permalink">
+								<?php esc_html_e( 'Read more', 'nr-posts-blocks' ); ?>
+							</a>
+						</div>
+					</article>
+				</template>
+
+				<p class="nrpb-posts-grid__no-results is-hidden"
+				   data-wp-class--is-hidden="!state.showNoResults">
+					<?php esc_html_e( 'No posts found.', 'nr-posts-blocks' ); ?>
+				</p>
+
+				<p class="nrpb-posts-grid__error is-hidden"
+				   data-wp-class--is-hidden="!state.showError">
+					<?php esc_html_e( 'Something went wrong. Please try again.', 'nr-posts-blocks' ); ?>
+				</p>
 			</div>
 
 			<div class="nrpb-posts-grid__pagination">
@@ -162,49 +226,47 @@ class Blocks {
 		$categories = wp_get_post_categories( $post->ID, [ 'fields' => 'all' ] );
 		$tags       = wp_get_post_tags( $post->ID, [ 'fields' => 'all' ] );
 
-		// Primary category — first non-default category only.
-		$default_cat_id  = (int) get_option( 'default_category' );
+		$default_cat_id   = (int) get_option( 'default_category' );
 		$valid_categories = is_array( $categories )
 			? array_values( array_filter( $categories, fn( $c ) => $c->term_id !== $default_cat_id ) )
 			: [];
 		$primary_category = $valid_categories[0] ?? null;
+
+		$has_image    = has_post_thumbnail();
+		$has_category = ! empty( $primary_category );
+		$has_tags     = ! empty( $tags );
 		?>
-		<article class="nrpb-post-card" data-post-id="<?php the_ID(); ?>">
-			<?php if ( has_post_thumbnail() ) : ?>
-				<div class="nrpb-post-card__image">
-					<a href="<?php echo esc_url( get_permalink() ); ?>" tabindex="-1" aria-hidden="true">
+		<article class="nrpb-post-card"
+				 data-wp-class--is-hidden="state.ssrIsHidden"
+				 data-post-id="<?php the_ID(); ?>">
+
+			<div class="nrpb-post-card__image<?php echo $has_image ? '' : ' is-hidden'; ?>">
+				<a href="<?php echo esc_url( get_permalink() ); ?>" tabindex="-1" aria-hidden="true">
+					<?php if ( $has_image ) : ?>
 						<?php the_post_thumbnail( 'medium_large' ); ?>
-					</a>
-				</div>
-			<?php endif; ?>
+					<?php endif; ?>
+				</a>
+			</div>
 
 			<div class="nrpb-post-card__body">
-				<?php if ( $primary_category ) : ?>
-					<span
-						class="nrpb-post-card__category"
-						data-slug="<?php echo esc_attr( $primary_category->slug ); ?>"
-					>
-						<?php echo esc_html( $primary_category->name ); ?>
-					</span>
-				<?php endif; ?>
+				<span class="nrpb-post-card__category<?php echo $has_category ? '' : ' is-hidden'; ?>">
+					<?php echo $has_category ? esc_html( $primary_category->name ) : ''; ?>
+				</span>
 
 				<h3 class="nrpb-post-card__title">
 					<a href="<?php echo esc_url( get_permalink() ); ?>"><?php echo esc_html( get_the_title() ); ?></a>
 				</h3>
 
 				<div class="nrpb-post-card__excerpt">
-					<?php the_excerpt(); ?>
+					<p><?php echo esc_html( wp_strip_all_tags( get_the_excerpt() ) ); ?></p>
 				</div>
 
-				<?php if ( ! empty( $tags ) ) : ?>
-					<div class="nrpb-post-card__tags" aria-label="<?php esc_attr_e( 'Tags', 'nr-posts-blocks' ); ?>">
-						<?php foreach ( $tags as $tag ) : ?>
-							<span class="nrpb-post-card__tag">
-								#<?php echo esc_html( $tag->name ); ?>
-							</span>
-						<?php endforeach; ?>
-					</div>
-				<?php endif; ?>
+				<div class="nrpb-post-card__tags<?php echo $has_tags ? '' : ' is-hidden'; ?>"
+					 aria-label="<?php esc_attr_e( 'Tags', 'nr-posts-blocks' ); ?>">
+					<?php foreach ( $tags as $tag ) : ?>
+						<span class="nrpb-post-card__tag"><?php echo esc_html( $tag->name ); ?></span>
+					<?php endforeach; ?>
+				</div>
 
 				<a class="nrpb-post-card__read-more" href="<?php echo esc_url( get_permalink() ); ?>">
 					<?php esc_html_e( 'Read more', 'nr-posts-blocks' ); ?>
@@ -282,6 +344,8 @@ class Blocks {
 									data-filter-value="<?php echo esc_attr( (string) $category->term_id ); ?>"
 									<?php echo wp_interactivity_data_wp_context( [ 'blockId' => $block_id, 'filterId' => (int) $category->term_id, 'filterType' => 'category' ] ); ?>
 									data-wp-on--click="actions.toggleFilter"
+									data-wp-class--is-active="state.isFilterActive"
+									data-wp-bind--aria-pressed="state.isFilterActive"
 									aria-pressed="false"
 								>
 									<?php echo esc_html( $category->name ); ?>
@@ -307,6 +371,8 @@ class Blocks {
 									data-filter-value="<?php echo esc_attr( (string) $tag->term_id ); ?>"
 									<?php echo wp_interactivity_data_wp_context( [ 'blockId' => $block_id, 'filterId' => (int) $tag->term_id, 'filterType' => 'tag' ] ); ?>
 									data-wp-on--click="actions.toggleFilter"
+									data-wp-class--is-active="state.isFilterActive"
+									data-wp-bind--aria-pressed="state.isFilterActive"
 									aria-pressed="false"
 								>
 									<?php echo esc_html( $tag->name ); ?>
@@ -324,6 +390,9 @@ class Blocks {
 					type="button"
 					<?php echo wp_interactivity_data_wp_context( [ 'blockId' => $block_id ] ); ?>
 					data-wp-on--click="actions.clearFilters"
+					data-wp-class--is-visible="state.hasActiveFilters"
+					data-wp-bind--aria-hidden="!state.hasActiveFilters"
+					data-wp-bind--tabindex="state.clearBtnTabIndex"
 					aria-label="<?php esc_attr_e( 'Clear filters', 'nr-posts-blocks' ); ?>"
 					aria-hidden="true"
 					tabindex="-1"
@@ -369,34 +438,41 @@ class Blocks {
 	}
 
 	/**
-	 * Builds the pagination HTML that matches the JS renderPagination() output
-	 * exactly so that both server-rendered and JS-rendered states are identical.
+	 * Builds the pagination HTML for SSR + dynamic progressive enhancement.
+	 *
+	 * Two nav elements are rendered:
+	 * 1. SSR nav — visible on load, hidden (via data-wp-class) after the first JS fetch.
+	 * 2. Dynamic nav — hidden on load, shown after the first JS fetch; page buttons are
+	 *    rendered declaratively via data-wp-each--btn from state.currentPaginationPages.
 	 *
 	 * @param int $current_page Current page number.
 	 * @param int $total_pages  Total number of pages.
 	 * @return string
 	 */
 	private function render_pagination_html( int $current_page, int $total_pages ): string {
-		$label = esc_attr__( 'Posts navigation', 'nr-posts-blocks' );
-		$html  = '<div class="nrpb-pagination" aria-label="' . $label . '">';
+		$label     = esc_attr__( 'Posts navigation', 'nr-posts-blocks' );
+		$prev_aria = esc_attr__( 'Previous page', 'nr-posts-blocks' );
+		$next_aria = esc_attr__( 'Next page', 'nr-posts-blocks' );
+
+		// ----- SSR nav ----------------------------------------------------------
+		$ssr = '<div class="nrpb-pagination"'
+			. ' data-wp-class--is-hidden="state.ssrIsHidden"'
+			. ' aria-label="' . $label . '">';
 
 		if ( $total_pages > 1 ) {
-			// Previous button.
-			$prev_page    = $current_page - 1;
 			$prev_disabled = $current_page <= 1 ? ' disabled aria-disabled="true"' : '';
-			$html .= sprintf(
+			$ssr .= sprintf(
 				'<button class="nrpb-pagination__btn nrpb-pagination__btn--prev" data-page="%d"%s aria-label="%s">&#8592; Prev</button>',
-				$prev_page,
+				max( 1, $current_page - 1 ),
 				$prev_disabled,
-				esc_attr__( 'Previous page', 'nr-posts-blocks' )
+				$prev_aria
 			);
 
-			// Page number buttons.
 			for ( $i = 1; $i <= $total_pages; $i++ ) {
 				$is_active    = $i === $current_page;
 				$active_class = $is_active ? ' is-active' : '';
 				$aria_current = $is_active ? ' aria-current="page"' : '';
-				$html .= sprintf(
+				$ssr .= sprintf(
 					'<button class="nrpb-pagination__btn nrpb-pagination__btn--page%s" data-page="%d" aria-label="%s"%s>%d</button>',
 					$active_class,
 					$i,
@@ -407,19 +483,47 @@ class Blocks {
 				);
 			}
 
-			// Next button.
-			$next_page     = $current_page + 1;
 			$next_disabled = $current_page >= $total_pages ? ' disabled aria-disabled="true"' : '';
-			$html .= sprintf(
+			$ssr .= sprintf(
 				'<button class="nrpb-pagination__btn nrpb-pagination__btn--next" data-page="%d"%s aria-label="%s">Next &#8594;</button>',
-				$next_page,
+				min( $total_pages, $current_page + 1 ),
 				$next_disabled,
-				esc_attr__( 'Next page', 'nr-posts-blocks' )
+				$next_aria
 			);
 		}
 
-		$html .= '</div>';
-		return $html;
+		$ssr .= '</div>';
+
+		// ----- Dynamic nav (JS takes over after first fetch) --------------------
+		$dyn = '<div class="nrpb-pagination is-hidden"'
+			. ' data-wp-class--is-hidden="!state.ssrIsHidden"'
+			. ' aria-label="' . $label . '">'
+
+			. '<button class="nrpb-pagination__btn nrpb-pagination__btn--prev"'
+			. ' data-wp-on--click="actions.prevPage"'
+			. ' data-wp-bind--disabled="state.prevBtnIsDisabled"'
+			. ' data-wp-bind--aria-disabled="state.prevBtnIsDisabled"'
+			. ' aria-label="' . $prev_aria . '">&#8592; Prev</button>'
+
+			. '<template'
+			. ' data-wp-each--btn="state.currentPaginationPages"'
+			. ' data-wp-each-key="context.btn.page">'
+			. '<button class="nrpb-pagination__btn nrpb-pagination__btn--page"'
+			. ' data-wp-class--is-active="context.btn.isCurrent"'
+			. ' data-wp-bind--aria-current="state.paginationBtnAriaCurrent"'
+			. ' data-wp-on--click="actions.goToPage"'
+			. ' data-wp-text="context.btn.page"></button>'
+			. '</template>'
+
+			. '<button class="nrpb-pagination__btn nrpb-pagination__btn--next"'
+			. ' data-wp-on--click="actions.nextPage"'
+			. ' data-wp-bind--disabled="state.nextBtnIsDisabled"'
+			. ' data-wp-bind--aria-disabled="state.nextBtnIsDisabled"'
+			. ' aria-label="' . $next_aria . '">Next &#8594;</button>'
+
+			. '</div>';
+
+		return $ssr . $dyn;
 	}
 
 	/**
@@ -442,8 +546,9 @@ class Blocks {
 			'nrpb-frontend',
 			'nrpbData',
 			[
-				'restUrl' => esc_url_raw( rest_url( 'nrpb/v1' ) ),
-				'nonce'   => wp_create_nonce( 'wp_rest' ),
+				'restUrl'           => esc_url_raw( rest_url( 'nrpb/v1' ) ),
+				'nonce'             => wp_create_nonce( 'wp_rest' ),
+				'defaultCategoryId' => (int) get_option( 'default_category' ),
 			]
 		);
 
