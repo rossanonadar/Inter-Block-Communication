@@ -16,6 +16,8 @@ class REST_API {
 
 	private const NAMESPACE = 'nrpb/v1';
 
+	private const CACHE_TTL = 600; // 10 minutes
+
 	/** @var self|null */
 	private static ?self $instance = null;
 
@@ -30,6 +32,61 @@ class REST_API {
 
 	public function init(): void {
 		add_action( 'rest_api_init', [ $this, 'register_routes' ] );
+		add_action( 'save_post_post',   [ $this, 'bump_cache_version' ] );
+		add_action( 'deleted_post',     [ $this, 'bump_cache_version' ] );
+		add_action( 'set_object_terms', [ $this, 'bump_cache_version_for_terms' ], 10, 4 );
+	}
+
+	private function get_cache_version(): int {
+		return (int) get_option( 'nrpb_cache_version', 0 );
+	}
+
+	/**
+	 * Increments the cache version, orphaning all previous transient keys so
+	 * they expire naturally. Used as a hook callback — accepts any args WordPress
+	 * passes but ignores them.
+	 */
+	public function bump_cache_version(): void {
+		update_option( 'nrpb_cache_version', $this->get_cache_version() + 1, false );
+	}
+
+	/**
+	 * Bumps the cache version only when a post's categories or tags change.
+	 * Narrowing to these two taxonomies avoids unnecessary invalidation from
+	 * nav menus, custom post types, or other term assignments.
+	 *
+	 * @param int    $object_id Object ID.
+	 * @param array  $terms     Array of object term IDs or slugs.
+	 * @param array  $tt_ids    Array of term taxonomy IDs.
+	 * @param string $taxonomy  Taxonomy slug.
+	 */
+	public function bump_cache_version_for_terms( int $object_id, array $terms, array $tt_ids, string $taxonomy ): void {
+		if ( in_array( $taxonomy, [ 'category', 'post_tag' ], true ) ) {
+			$this->bump_cache_version();
+		}
+	}
+
+	/**
+	 * Builds a stable transient key for a given set of query parameters.
+	 * IDs are sorted before hashing so [1,2] and [2,1] map to the same key.
+	 *
+	 * @param int[] $category_ids Selected category IDs.
+	 * @param int[] $tag_ids      Selected tag IDs.
+	 * @param int   $page         Page number.
+	 * @param int   $posts_per_page Posts per page.
+	 * @return string
+	 */
+	private function get_cache_key( array $category_ids, array $tag_ids, int $page, int $posts_per_page ): string {
+		sort( $category_ids );
+		sort( $tag_ids );
+		$parts = implode( '|', [
+			$this->get_cache_version(),
+			implode( ',', $category_ids ),
+			implode( ',', $tag_ids ),
+			$page,
+			$posts_per_page,
+		] );
+		return 'nrpb_posts_' . md5( $parts );
 	}
 
 	public function register_routes(): void {
@@ -98,6 +155,12 @@ class REST_API {
 		$category_ids   = $request->get_param( 'categories' );
 		$tag_ids        = $request->get_param( 'tags' );
 
+		$cache_key = $this->get_cache_key( $category_ids, $tag_ids, $page, $posts_per_page );
+		$cached    = get_transient( $cache_key );
+		if ( false !== $cached ) {
+			return rest_ensure_response( $cached );
+		}
+
 		$query_args = [
 			'post_type'      => 'post',
 			'post_status'    => 'publish',
@@ -114,14 +177,16 @@ class REST_API {
 			$posts[] = $this->format_post( $post );
 		}
 
-		return rest_ensure_response(
-			[
-				'posts'       => $posts,
-				'total'       => (int) $query->found_posts,
-				'total_pages' => (int) $query->max_num_pages,
-				'page'        => $page,
-			]
-		);
+		$response_data = [
+			'posts'       => $posts,
+			'total'       => (int) $query->found_posts,
+			'total_pages' => (int) $query->max_num_pages,
+			'page'        => $page,
+		];
+
+		set_transient( $cache_key, $response_data, self::CACHE_TTL );
+
+		return rest_ensure_response( $response_data );
 	}
 
 	/**

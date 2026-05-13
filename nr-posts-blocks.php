@@ -4,7 +4,7 @@
  * Plugin URI:        https://github.com/nadarrossano/nr-posts-blocks
  * Description:       Dynamic Posts Grid and Filter Gutenberg blocks with demo content seeding.
  * Version:           1.0.0
- * Requires at least: 6.3
+ * Requires at least: 6.5
  * Requires PHP:      8.0
  * Author:            Nadar Rossano
  * License:           GPL-2.0-or-later

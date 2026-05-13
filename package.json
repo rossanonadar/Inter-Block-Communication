@@ -17,6 +17,7 @@
     "@wordpress/data": "^10.0.0",
     "@wordpress/element": "^6.0.0",
     "@wordpress/i18n": "^5.0.0",
+    "@wordpress/interactivity": "^6.45.0",
     "@wordpress/primitives": "^4.0.0"
   },
   "devDependencies": {

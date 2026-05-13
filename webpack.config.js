@@ -7,6 +7,12 @@ const isProduction = process.env.NODE_ENV === 'production';
 // WordPress script handles that map to our externals.
 // These become the `dependencies` array inside each .asset.php file,
 // telling WordPress which scripts to load before ours.
+// Module handle for the Interactivity API view script.
+// WordPress needs this registered as a Script Module (type="module"), not a
+// regular script. Webpack outputs it as an ES module; WordPress's Script
+// Modules API enqueues it with the correct import map for @wordpress/interactivity.
+const INTERACTIVITY_MODULE_ENTRY = 'nrpb-view';
+
 const WP_DEPENDENCIES = {
 	'posts-grid': [
 		'wp-blocks',
@@ -33,6 +39,11 @@ const WP_DEPENDENCIES = {
 		'wp-i18n',
 	],
 	frontend: [],
+	// nrpb-view.js is an ES module built by the interactivity config.
+	// WordPress reads nrpb-view.asset.php to discover its '@wordpress/interactivity'
+	// dependency, which triggers the import map entry that lets the bare specifier
+	// resolve in the browser. The main config emits this file via WordPressAssetPlugin.
+	[ INTERACTIVITY_MODULE_ENTRY ]: [ '@wordpress/interactivity' ],
 };
 
 /**
@@ -64,7 +75,11 @@ function phpArray( arr ) {
 	return `array( '${ arr.join( "', '" ) }' )`;
 }
 
-module.exports = {
+// ---------------------------------------------------------------------------
+// Config 1 — editor scripts + frontend CSS/JS (CommonJS/IIFE output)
+// ---------------------------------------------------------------------------
+const mainConfig = {
+	name: 'main',
 	entry: {
 		'posts-grid':   './src/blocks/posts-grid/index.js',
 		'posts-filter': './src/blocks/posts-filter/index.js',
@@ -127,11 +142,7 @@ module.exports = {
 		new MiniCssExtractPlugin( {
 			filename: '[name].css',
 		} ),
-
-		// Emit .asset.php files that WordPress needs to resolve dependencies.
 		new WordPressAssetPlugin(),
-
-		// Copy each block.json into build/ with corrected file: paths.
 		new CopyWebpackPlugin( {
 			patterns: [
 				{
@@ -152,6 +163,12 @@ module.exports = {
 						if ( json.style ) {
 							json.style = 'file:./frontend.css';
 						}
+						if ( json.viewScriptModule ) {
+							const vmFile = path.basename(
+								json.viewScriptModule.replace( /^file:.*\//, '' )
+							);
+							json.viewScriptModule = `file:./${ vmFile }`;
+						}
 
 						return JSON.stringify( json, null, '\t' );
 					},
@@ -164,3 +181,53 @@ module.exports = {
 	},
 	devtool: isProduction ? false : 'source-map',
 };
+
+// ---------------------------------------------------------------------------
+// Config 2 — Interactivity API view script (ES module output)
+//
+// WordPress Script Modules API requires type="module" output.
+// @wordpress/interactivity is externalized — WordPress provides it via
+// an import map at runtime so the browser resolves it without bundling.
+// ---------------------------------------------------------------------------
+const moduleConfig = {
+	name: 'interactivity',
+	dependencies: [ 'main' ], // run after main so build/ is clean first
+	entry: {
+		[ INTERACTIVITY_MODULE_ENTRY ]: './src/interactivity/view.js',
+	},
+	output: {
+		path: path.resolve( __dirname, 'build' ),
+		filename: '[name].js',
+		module: true,
+		library: { type: 'module' },
+		clean: false, // main config already cleaned
+	},
+	experiments: {
+		outputModule: true,
+	},
+	externalsType: 'module',
+	externals: {
+		'@wordpress/interactivity': '@wordpress/interactivity',
+	},
+	module: {
+		rules: [
+			{
+				test: /\.js$/,
+				exclude: /node_modules/,
+				use: {
+					loader: 'babel-loader',
+					options: {
+						presets: [ '@babel/preset-env' ],
+					},
+				},
+			},
+		],
+	},
+	resolve: {
+		extensions: [ '.js' ],
+	},
+	devtool: isProduction ? false : 'source-map',
+	mode: isProduction ? 'production' : 'development',
+};
+
+module.exports = [ mainConfig, moduleConfig ];
