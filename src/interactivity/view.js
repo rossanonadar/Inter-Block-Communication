@@ -53,6 +53,10 @@ function buildPagination( currentPage, totalPages ) {
 // One AbortController per blockId — cancelled before each new fetch.
 const abortControllers = {};
 
+// Guard so only one popstate listener is registered regardless of how many
+// filter instances are on the page.
+let popstateRegistered = false;
+
 // ---------------------------------------------------------------------------
 // Store
 // ---------------------------------------------------------------------------
@@ -383,23 +387,27 @@ const { state, actions } = store( 'nrpb', {
 					: filter.tags;
 			}
 
-			window.addEventListener( 'popstate', () => {
-				const p  = new URLSearchParams( window.location.search );
-				const c  = p.get( 'nrpb_categories' );
-				const t  = p.get( 'nrpb_tags' );
-				const pg = parseInt( p.get( 'nrpb_page' ) || '1', 10 );
-				if ( ! state.filters[ blockId ] ) return;
+			if ( ! popstateRegistered ) {
+				popstateRegistered = true;
+				window.addEventListener( 'popstate', () => {
+					const p  = new URLSearchParams( window.location.search );
+					const c  = p.get( 'nrpb_categories' );
+					const t  = p.get( 'nrpb_tags' );
+					const pg = parseInt( p.get( 'nrpb_page' ) || '1', 10 );
 
-				state.filters[ blockId ].categories = c
-					? c.split( ',' ).map( Number ).filter( Boolean )
-					: [];
-				state.filters[ blockId ].tags = t
-					? t.split( ',' ).map( Number ).filter( Boolean )
-					: [];
-				state.filters[ blockId ].page = isNaN( pg ) || pg < 1 ? 1 : pg;
-
-				actions._fetchPosts( blockId );
-			} );
+					Object.keys( state.filters ).forEach( ( id ) => {
+						if ( ! state.filters[ id ] ) return;
+						state.filters[ id ].categories = c
+							? c.split( ',' ).map( Number ).filter( Boolean )
+							: [];
+						state.filters[ id ].tags = t
+							? t.split( ',' ).map( Number ).filter( Boolean )
+							: [];
+						state.filters[ id ].page = isNaN( pg ) || pg < 1 ? 1 : pg;
+						actions._fetchPosts( id );
+					} );
+				} );
+			}
 		},
 
 		initGrid() {
