@@ -79,6 +79,12 @@ Keying by `blockId` means multiple Filter + Grid pairs on the same page are full
 
 On mount (`callbacks.initFilter`, `callbacks.initGrid`) the store reads these params and restores filter + page state before the first fetch. The `popstate` listener keeps state in sync when the user navigates with the browser's back/forward buttons.
 
+**Multi-pair support — automatic DOM-order pairing:**
+
+Multiple Filter + Grid pairs on the same page are supported with zero editor configuration. The PHP render callbacks use two independent static counters (`$filter_index`, `$grid_index`). On each page request the Nth filter and the Nth grid receive the same pair key (`nrpb-pair-0`, `nrpb-pair-1`, …), regardless of what is stored in the block's `blockId` attribute. This means placing a second Filter + Grid pair anywhere on the page just works — the editor never needs to copy or paste IDs.
+
+The one assumption: the Nth filter in HTML order corresponds to the Nth grid in HTML order. In standard Gutenberg layouts this is always the case.
+
 **Why not the alternatives:**
 
 | Approach | Why ruled out |
@@ -96,7 +102,7 @@ On mount (`callbacks.initFilter`, `callbacks.initGrid`) the store reads these pa
 - Pro: `wp_interactivity_config()` / `getConfig()` replaces `wp_localize_script` — config travels with the block, not as a global window object.
 - Con: requires WordPress 6.6+; not available on older installs without a polyfill.
 - Con: State mutations must be in-place (`state.filters[blockId].categories = updated`). Replacing the entire object at the top level orphans Preact signal subscriptions and breaks reactive directives.
-- Con: `blockId` is assigned once on first insertion from Gutenberg's ephemeral `clientId`. Duplicating a block in the editor copies the `blockId` attribute; the `if (!blockId)` guard will not regenerate it, leaving both blocks sharing the same state slot on the frontend. The workaround for the demo is to manually set matching blockIds on paired filter+grid blocks, which the seeder does automatically.
+- Con: URL params (`nrpb_categories`, `nrpb_tags`, `nrpb_page`) are global — shared across all pairs on the same page. A full fix would require per-pair namespacing (e.g. `nrpb_0_categories`), which is a larger change.
 
 ---
 
@@ -188,7 +194,7 @@ Featured images are generated programmatically as SVG files with a gradient back
 |------|------------|
 | **SEO** | Filtered results are not crawlable. The initial server-rendered grid (no filters applied) is fully SEO-friendly; filtered states are client-side only. URL params allow search engines to index specific filtered views only if they execute JavaScript. |
 | **Accessibility** | Filter changes announce result count via an `aria-live="polite"` region. A full `aria-live` announcement for individual result titles is not implemented. |
-| **blockId duplication** | Duplicating a grid or filter block in the Gutenberg editor copies the `blockId` attribute. The `!blockId` guard in `edit.js` will not assign a new ID because the attribute is already set, leaving both blocks sharing the same state slot on the frontend. For the demo page this is handled by the seeder; new placements require manually matching blockIds between a filter and its paired grid. |
+| **URL params (multi-pair)** | `nrpb_categories`, `nrpb_tags`, and `nrpb_page` are global query params shared across all pairs on the same page. With two pairs, navigating to page 2 on pair A also restores page 2 on pair B after a hard reload. Full fix requires per-pair param namespacing. |
 | **SVG images** | WordPress does not generate srcset for SVG attachments. Real content should use JPEG/WebP images. |
 | **WordPress version** | The Interactivity API requires WordPress 6.6+. Older installs are not supported without a polyfill. |
 
