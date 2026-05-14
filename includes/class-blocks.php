@@ -17,6 +17,12 @@ class Blocks {
 	/** @var self|null */
 	private static ?self $instance = null;
 
+	// Separate counters for filters and grids — incremented on each render call.
+	// The Nth filter and Nth grid on the page share the same pair key, enabling
+	// automatic communication without any editor configuration.
+	private static int $filter_index = 0;
+	private static int $grid_index   = 0;
+
 	private function __construct() {}
 
 	public static function get_instance(): self {
@@ -79,7 +85,7 @@ class Blocks {
 		$columns        = absint( $attributes['columns'] ?? 3 );
 		$posts_per_page = absint( $attributes['postsPerPage'] ?? 6 );
 		$paged          = absint( get_query_var( 'nrpb_page', 1 ) );
-		$block_id       = $attributes['blockId'] ?? '';
+		$block_id       = 'nrpb-pair-' . self::$grid_index++;
 
 		$query_args = [
 			'post_type'      => 'post',
@@ -301,7 +307,7 @@ class Blocks {
 	 * @return string
 	 */
 	public function render_posts_filter( array $attributes ): string {
-		$block_id   = $attributes['blockId'] ?? '';
+		$block_id   = 'nrpb-pair-' . self::$filter_index++;
 		$categories = get_terms(
 			[
 				'taxonomy'   => 'category',
