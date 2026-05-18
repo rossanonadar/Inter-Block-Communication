@@ -64,8 +64,8 @@ Keying by `blockId` means multiple Filter + Grid pairs on the same page are full
 
 1. The user clicks a filter button (`data-wp-on--click="actions.toggleFilter"`).
 2. `toggleFilter` reads `blockId`, `filterId`, and `filterType` from the button's `data-wp-context`.
-3. `state.filters` is replaced at the top level so Preact signal subscriptions fire reliably.
-4. Two imperative helpers run synchronously: `updateFilterButtons(blockId)` (adds/removes `.is-active` and sets `aria-pressed`) and `updateClearButton(blockId)` (shows/hides the clear button via `hidden`).
+3. `state.filters[blockId]` is mutated in-place — spread replacement would orphan Preact signal subscriptions and break reactive directives.
+4. `data-wp-class--is-active` and `data-wp-class--is-visible` directives react automatically to the state change — no imperative DOM manipulation.
 5. `_syncFilterURL(blockId)` writes the selection to `?nrpb_categories=…&nrpb_tags=…` via `history.replaceState`.
 6. `_fetchPosts(blockId)` cancels any in-flight request for the same `blockId` with an `AbortController`, then fetches the REST endpoint and re-renders posts and pagination.
 
@@ -126,6 +126,10 @@ All three blocks use PHP render callbacks instead of JavaScript `save()` output.
 The brief requires pagination to be an inner block of the grid. This was implemented with a locked `templateLock="all"` so the pagination block cannot be removed or reordered in the editor, but is always present.
 
 **Why inner block instead of a block attribute:** the brief specified it. Beyond compliance, it makes the pagination visually discoverable in the editor's block tree and opens the door to letting editors swap in a custom pagination style in the future.
+
+**Block context:** the grid passes `nrpb/postsPerPage` and `nrpb/blockId` to the pagination via `providesContext` / `usesContext`. `render_pagination()` reads both values from `$block->context`, making the parent–child relationship explicit at the PHP level.
+
+**Progressive enhancement:** the PHP render outputs two pagination navs. The SSR nav is visible on first load and its buttons are fully interactive — each carries a `data-wp-context` with its target page and calls `actions.goToPage` directly, so pagination works without requiring a filter interaction first. After the first JS fetch the SSR nav hides and the dynamic nav (driven by `data-wp-each--btn`) takes over.
 
 **Tradeoff:** the pagination block is not independently insertable (its `block.json` sets `"parent": ["nrpb/posts-grid"]` and `"inserter": false`). It only makes sense in context. This is intentional — a standalone pagination block with no grid attached is meaningless.
 
