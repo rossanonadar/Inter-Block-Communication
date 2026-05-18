@@ -441,6 +441,7 @@ class Blocks {
 	 */
 	public function render_pagination( array $attributes, string $content, \WP_Block $block ): string {
 		$posts_per_page = absint( $block->context['nrpb/postsPerPage'] ?? 6 );
+		$block_id       = (string) ( $block->context['nrpb/blockId'] ?? '' );
 		$paged          = absint( get_query_var( 'nrpb_page', 1 ) );
 
 		// Lightweight count query — fetches IDs only, no meta/term cache warmup.

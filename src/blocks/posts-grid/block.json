@@ -42,6 +42,7 @@
   },
   "allowedBlocks": ["nrpb/pagination"],
   "providesContext": {
-    "nrpb/postsPerPage": "postsPerPage"
+    "nrpb/postsPerPage": "postsPerPage",
+    "nrpb/blockId": "blockId"
   }
 }
