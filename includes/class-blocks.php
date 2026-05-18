@@ -487,10 +487,10 @@ class Blocks {
 		if ( $total_pages > 1 ) {
 			$prev_disabled = $current_page <= 1 ? ' disabled aria-disabled="true"' : '';
 			$ssr .= sprintf(
-				'<button class="nrpb-pagination__btn nrpb-pagination__btn--prev" data-page="%d"%s aria-label="%s">&#8592; Prev</button>',
-				max( 1, $current_page - 1 ),
+				'<button class="nrpb-pagination__btn nrpb-pagination__btn--prev"%s aria-label="%s" data-wp-context=\'{"btn":{"page":%d,"isCurrent":false}}\' data-wp-on--click="actions.goToPage">&#8592; Prev</button>',
 				$prev_disabled,
-				$prev_aria
+				$prev_aria,
+				max( 1, $current_page - 1 )
 			);
 
 			for ( $i = 1; $i <= $total_pages; $i++ ) {
@@ -498,22 +498,23 @@ class Blocks {
 				$active_class = $is_active ? ' is-active' : '';
 				$aria_current = $is_active ? ' aria-current="page"' : '';
 				$ssr .= sprintf(
-					'<button class="nrpb-pagination__btn nrpb-pagination__btn--page%s" data-page="%d" aria-label="%s"%s>%d</button>',
+					'<button class="nrpb-pagination__btn nrpb-pagination__btn--page%s" aria-label="%s"%s data-wp-context=\'{"btn":{"page":%d,"isCurrent":%s}}\' data-wp-on--click="actions.goToPage">%d</button>',
 					$active_class,
-					$i,
 					/* translators: %d: page number */
 					esc_attr( sprintf( __( 'Page %d', 'nr-posts-blocks' ), $i ) ),
 					$aria_current,
+					$i,
+					$is_active ? 'true' : 'false',
 					$i
 				);
 			}
 
 			$next_disabled = $current_page >= $total_pages ? ' disabled aria-disabled="true"' : '';
 			$ssr .= sprintf(
-				'<button class="nrpb-pagination__btn nrpb-pagination__btn--next" data-page="%d"%s aria-label="%s">Next &#8594;</button>',
-				min( $total_pages, $current_page + 1 ),
+				'<button class="nrpb-pagination__btn nrpb-pagination__btn--next"%s aria-label="%s" data-wp-context=\'{"btn":{"page":%d,"isCurrent":false}}\' data-wp-on--click="actions.goToPage">Next &#8594;</button>',
 				$next_disabled,
-				$next_aria
+				$next_aria,
+				min( $total_pages, $current_page + 1 )
 			);
 		}
 
